@@ -7,12 +7,8 @@ import { agentCategories } from '@gitroom/nestjs-libraries/agent/agent.categorie
 import { z } from 'zod';
 import { agentTopics } from '@gitroom/nestjs-libraries/agent/agent.topics';
 import { PostsService } from '@gitroom/nestjs-libraries/database/prisma/posts/posts.service';
-
-const model = new ChatOpenAI({
-  apiKey: process.env.OPENAI_API_KEY || 'sk-proj-',
-  model: 'gpt-4o-2024-08-06',
-  temperature: 0,
-});
+import { AIProviderManagerService } from '@gitroom/nestjs-libraries/openai/ai-provider-manager.service';
+import { AIProviderDiscoveryService } from '@gitroom/nestjs-libraries/openai/ai-provider-discovery.service';
 
 interface WorkflowChannelsState {
   messages: BaseMessage[];
@@ -36,7 +32,57 @@ const hook = z.object({
 
 @Injectable()
 export class AgentGraphInsertService {
-  constructor(private _postsService: PostsService) {}
+  private model: ChatOpenAI;
+
+  constructor(
+    private _postsService: PostsService,
+    private readonly providerManager: AIProviderManagerService,
+    private readonly discoveryService: AIProviderDiscoveryService
+  ) {
+    this.initializeModel();
+  }
+
+  /**
+   * Initialize the ChatOpenAI model with dynamic provider selection
+   */
+  private initializeModel(): void {
+    const enabledProviders = this.discoveryService.getEnabledProviders();
+
+    if (enabledProviders.size > 0) {
+      // Use new provider system
+      const provider = this.providerManager.getNextProvider({ taskType: 'smart' });
+      if (provider) {
+        this.model = new ChatOpenAI({
+          apiKey: provider.key,
+          model: provider.smartModel,
+          temperature: 0,
+          ...(provider.url && {
+            openAIApiKey: provider.key,
+            configuration: { baseURL: provider.url }
+          }),
+        });
+      } else {
+        this.createLegacyModel();
+      }
+    } else {
+      this.createLegacyModel();
+    }
+  }
+
+  /**
+   * Create legacy model for backward compatibility
+   */
+  private createLegacyModel(): void {
+    this.model = new ChatOpenAI({
+      apiKey: process.env.OPENAI_API_KEY || 'sk-proj-',
+      model: process.env.SMART_LLM || 'gpt-4o-2024-08-06',
+      temperature: 0,
+      ...(process.env.OPENAI_BASE_URL && {
+        openAIApiKey: process.env.OPENAI_API_KEY,
+        configuration: { baseURL: process.env.OPENAI_BASE_URL }
+      }),
+    });
+  }
   static state = () =>
     new StateGraph<WorkflowChannelsState>({
       channels: {
@@ -52,9 +98,12 @@ export class AgentGraphInsertService {
       },
     });
 
+  /**
+   * Find category for the post using AI classification
+   */
   async findCategory(state: WorkflowChannelsState) {
     const { messages } = state;
-    const structuredOutput = model.withStructuredOutput(category);
+    const structuredOutput = this.model.withStructuredOutput(category);
     return ChatPromptTemplate.fromTemplate(
       `
 You are an assistant that get a social media post and categorize it into to one from the following categories:
@@ -70,9 +119,12 @@ Here is the post:
       });
   }
 
+  /**
+   * Find topic for the post using AI classification
+   */
   findTopic(state: WorkflowChannelsState) {
     const { messages } = state;
-    const structuredOutput = model.withStructuredOutput(topic);
+    const structuredOutput = this.model.withStructuredOutput(topic);
     return ChatPromptTemplate.fromTemplate(
       `
 You are an assistant that get a social media post and categorize it into one of the following topics:
@@ -88,9 +140,12 @@ Here is the post:
       });
   }
 
+  /**
+   * Extract hook from the post using AI
+   */
   findHook(state: WorkflowChannelsState) {
     const { messages } = state;
-    const structuredOutput = model.withStructuredOutput(hook);
+    const structuredOutput = this.model.withStructuredOutput(hook);
     return ChatPromptTemplate.fromTemplate(
       `
 You are an assistant that get a social media post and extract the hook, the hook is usually the first or second of both sentence of the post, but can be in a different place, make sure you don't change the wording of the post use the exact text:
@@ -103,6 +158,9 @@ You are an assistant that get a social media post and extract the hook, the hook
       });
   }
 
+  /**
+   * Save the analyzed post to the database
+   */
   async savePost(state: WorkflowChannelsState) {
     await this._postsService.createPopularPosts({
       category: state.category,
@@ -114,12 +172,16 @@ You are an assistant that get a social media post and extract the hook, the hook
     return {};
   }
 
+  /**
+   * Process a new post through the AI analysis workflow
+   * @param post - The post content to analyze
+   */
   newPost(post: string) {
     const state = AgentGraphInsertService.state();
     const workflow = state
-      .addNode('find-category', this.findCategory)
-      .addNode('find-topic', this.findTopic)
-      .addNode('find-hook', this.findHook)
+      .addNode('find-category', this.findCategory.bind(this))
+      .addNode('find-topic', this.findTopic.bind(this))
+      .addNode('find-hook', this.findHook.bind(this))
       .addNode('save-post', this.savePost.bind(this))
       .addEdge(START, 'find-category')
       .addEdge('find-category', 'find-topic')

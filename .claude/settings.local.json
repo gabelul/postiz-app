@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__fetch-server__fetch"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

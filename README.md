@@ -100,6 +100,42 @@
 - Redis (BullMQ)
 - Resend (email notifications)
 
+## 🤖 AI Provider System
+
+Postiz supports multiple AI providers with automatic rotation, failover, and cost optimization. Configure multiple providers like OpenAI, OpenRouter, Azure OpenAI, Groq, and more.
+
+### Quick Setup
+
+Add any combination of AI providers using this naming pattern:
+
+```env
+# OpenAI
+AI_OPENAI_KEY="sk-proj-xxx"
+AI_OPENAI_SMART="gpt-4.1"
+AI_OPENAI_FAST="gpt-4o-mini"
+
+# OpenRouter (for Claude, Gemini, etc.)
+AI_OPENROUTER_URL="https://openrouter.ai/api/v1"
+AI_OPENROUTER_KEY="sk-or-v1-xxx"
+AI_OPENROUTER_SMART="anthropic/claude-3.5-sonnet"
+AI_OPENROUTER_FAST="anthropic/claude-3-haiku"
+
+# Global settings
+AI_ROTATION="round-robin"
+AI_RETRY_FAILED="true"
+```
+
+### Key Features
+
+- **🔄 Automatic Rotation**: Round-robin, random, weighted, or failover strategies
+- **⚡ Task-Based Selection**: Smart models for complex tasks, fast models for simple ones
+- **🛡️ Automatic Failover**: Retry with different providers on failure
+- **💰 Cost Optimization**: Route tasks to the most cost-effective providers
+- **📊 Health Monitoring**: Track provider performance and availability
+- **🔧 Easy Configuration**: Add providers without code changes
+
+**📖 [Full AI Provider Documentation](dev-docs/ai-provider-system.md)**
+
 ## Quick Start
 
 To have the project up and running, please follow the [Quick Start Guide](https://docs.postiz.com/quickstart)
