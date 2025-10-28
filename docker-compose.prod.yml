@@ -49,14 +49,13 @@ services:
 
   # Main Postiz Application (built from your private repository with security enhancements)
   postiz-app:
-    # Build from your local Dockerfile with all security fixes included
+    # Build from your local Dockerfile with all security fixes and Nginx embedded
     build:
       context: .
       dockerfile: Dockerfile.production
       args:
         NEXT_PUBLIC_VERSION: "1.0.0"
-    # Alternative: Use pre-built image from your registry
-    # image: your-registry/postiz:latest
+    image: postiz:latest  # Tag the built image
     container_name: postiz-app
     restart: always
     depends_on:
@@ -113,10 +112,9 @@ services:
       # === Performance Configuration (Optional) ===
       MAX_WORKERS: ${MAX_WORKERS:-4}
 
-    # Only expose port 5000 to localhost (for Nginx reverse proxy)
-    # NOT exposed to the internet
-    ports:
-      - "127.0.0.1:5000:5000"
+    # Ports are not exposed - Centminmod Nginx connects to Docker network
+    # Backend (3000) and Frontend (4200) run internally
+    # Centminmod reverse proxy forwards to this container via Docker network
 
     volumes:
       # Persistent uploads directory

@@ -43,8 +43,8 @@ services:
     # ref: https://hub.docker.com/r/redis/redisinsight
     image: redis/redisinsight:latest
     container_name: postiz-redisinsight
-    links:
-      - postiz-redis
+    # Note: links directive is deprecated, using networks instead (already defined above)
+    # services can communicate via container name on the postiz-network
     ports:
       - '5540:5540'
     volumes:
@@ -52,6 +52,8 @@ services:
     networks:
       - postiz-network
     restart: always
+    depends_on:
+      - postiz-redis
 
 volumes:
   redisinsight:

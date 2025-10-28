@@ -1,7 +1,10 @@
 # Production Dockerfile for Postiz
+# Multi-stage build with embedded Nginx reverse proxy
 # Builds from your private repository code with all security enhancements
 
+# ============================================================================
 # Stage 1: Builder - Install dependencies and build
+# ============================================================================
 FROM node:22-alpine AS builder
 
 ARG NEXT_PUBLIC_VERSION
@@ -15,28 +18,29 @@ RUN npm --no-update-notifier --no-fund --global install pnpm@10.6.1
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
+# Copy workspace configuration (CRITICAL: must come before package.json)
+COPY pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY package.json ./
 
-# Copy workspace packages
+# Copy all workspace packages (needed for pnpm to resolve dependencies)
 COPY apps ./apps
 COPY libraries ./libraries
-COPY var ./var
+COPY prisma ./prisma
 
-# Install all dependencies
+# Install all dependencies (pnpm resolves workspace correctly)
 RUN pnpm install --frozen-lockfile
 
-# Copy entire project (including your security fixes)
+# Copy remaining project files
 COPY . .
 
 # Generate Prisma client
 RUN pnpm run prisma-generate
 
-# Build all applications with increased memory
+# Build all applications with increased memory for Next.js
 RUN NODE_OPTIONS="--max-old-space-size=4096" pnpm run build
 
 # ============================================================================
-# Stage 2: Runtime - Minimal production image
+# Stage 2: Runtime - Production image with Nginx
 # ============================================================================
 FROM node:22-alpine
 
@@ -44,11 +48,14 @@ ARG NEXT_PUBLIC_VERSION
 ENV NEXT_PUBLIC_VERSION=$NEXT_PUBLIC_VERSION
 ENV NODE_ENV=production
 
-# Install only runtime dependencies
+# Install runtime dependencies (curl for health checks, dumb-init for signal handling)
+# Note: Nginx is handled by Centminmod reverse proxy on your server
 RUN apk add --no-cache bash curl dumb-init
 
 # Create application user (non-root for security)
 RUN adduser -D -g 'postiz' postiz || true
+
+# Create necessary directories with proper ownership
 RUN mkdir -p /app /uploads /var/log/postiz
 RUN chown -R postiz:postiz /app /uploads /var/log/postiz
 
@@ -57,32 +64,46 @@ RUN npm --no-update-notifier --no-fund --global install pnpm@10.6.1 pm2
 
 WORKDIR /app
 
-# Copy only necessary files from builder stage
+# Copy workspace configuration from builder
+COPY --from=builder --chown=postiz:postiz /app/pnpm-workspace.yaml ./
 COPY --from=builder --chown=postiz:postiz /app/package.json /app/pnpm-lock.yaml ./
+
+# Copy all workspace packages
 COPY --from=builder --chown=postiz:postiz /app/apps ./apps
 COPY --from=builder --chown=postiz:postiz /app/libraries ./libraries
 COPY --from=builder --chown=postiz:postiz /app/prisma ./prisma
-COPY --from=builder --chown=postiz:postiz /app/node_modules ./node_modules
-COPY --from=builder --chown=postiz:postiz /app/.next ./.next
+
+# Copy built applications (Next.js outputs go to apps/frontend/.next and apps/backend/dist)
+COPY --from=builder --chown=postiz:postiz /app/apps/frontend/.next ./apps/frontend/.next
+COPY --from=builder --chown=postiz:postiz /app/apps/backend/dist ./apps/backend/dist
+COPY --from=builder --chown=postiz:postiz /app/apps/workers/dist ./apps/workers/dist
+COPY --from=builder --chown=postiz:postiz /app/apps/cron/dist ./apps/cron/dist
+
+# Copy Prisma schema
+COPY --from=builder --chown=postiz:postiz /app/node_modules/.prisma ./node_modules/.prisma
+
+# Install ONLY production dependencies (no dev deps)
+# This ensures smaller image size and no dev tools
+RUN pnpm install --frozen-lockfile --prod --no-optional
 
 # Create uploads directory
 RUN mkdir -p /uploads && chown -R postiz:postiz /uploads
 
-# Install production dependencies only
-RUN pnpm install --frozen-lockfile --prod
-
-# Health check
+# Health check for the backend service (running on port 3000 internally)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD curl -f http://localhost:5000/health || exit 1
+  CMD curl -f http://localhost:3000/health || exit 1
 
-# Switch to non-root user
+# Switch to non-root user for security
 USER postiz
 
-# Expose only the Nginx port (3000 and 4200 are internal)
-EXPOSE 5000
+# Don't expose ports - Docker Compose handles port mapping
+# Backend runs on 3000, Frontend on 4200 (internal to container)
+# Centminmod reverse proxy connects to Docker network
 
-# Use dumb-init to handle signals properly
+# Use dumb-init to handle signals properly and prevent zombie processes
 ENTRYPOINT ["/usr/sbin/dumb-init", "--"]
 
-# Start Nginx (from docker-compose or entrypoint) and PM2
-CMD ["sh", "-c", "pnpm run pm2-run"]
+# Start the application services via PM2
+# Note: Nginx is handled separately by Centminmod on your server
+# This container only runs the backend, frontend, workers, and cron services
+CMD ["sh", "-c", "pm2-runtime start ecosystem.config.js || pnpm run start:prod:backend"]
