@@ -232,8 +232,18 @@ export class AISettingsController {
       return { valid: false, error: 'Task assignment not found' };
     }
 
+    // Retrieve the raw provider with decrypted key for validation
+    const provider = await this._aiSettingsService.getProviderInternal(
+      org.id,
+      assignment.provider.id
+    );
+
+    if (!provider) {
+      return { valid: false, error: 'Provider not found' };
+    }
+
     // Validate the provider and model
-    const validation = await this._aiSettingsService.validateProvider(assignment.provider);
+    const validation = await this._aiSettingsService.validateProvider(provider);
 
     if (!validation.valid) {
       return {

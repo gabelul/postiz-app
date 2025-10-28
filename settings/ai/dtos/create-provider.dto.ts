@@ -43,7 +43,7 @@ export class CreateProviderDto {
    * @ValidateIf - Only validated if provider requires authentication
    */
   @IsString()
-  @ValidateIf((o) => o.type !== 'ollama')
+  @ValidateIf((o) => o.type !== 'ollama' && o.type !== 'openai-compatible')
   @IsNotEmpty()
   @MinLength(1)
   apiKey?: string;

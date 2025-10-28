@@ -1,6 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import type {
+  IProviderResponse,
+  ITaskAssignment,
+} from '@gitroom/nestjs-libraries/src/dtos/ai/ai-provider.types';
 import { AIProvidersList } from './ai-providers-list.component';
 import { AddProviderModal } from './add-provider-modal.component';
 import { TaskAssignmentPanel } from './task-assignment.component';
@@ -13,8 +17,8 @@ import { TaskAssignmentPanel } from './task-assignment.component';
  * - Task assignments configuration
  */
 export function AIProvidersPage() {
-  const [providers, setProviders] = useState<any[]>([]);
-  const [tasks, setTasks] = useState<any[]>([]);
+  const [providers, setProviders] = useState<IProviderResponse[]>([]);
+  const [tasks, setTasks] = useState<ITaskAssignment[]>([]);
   const [isAddingProvider, setIsAddingProvider] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,8 +45,8 @@ export function AIProvidersPage() {
         throw new Error('Failed to load AI settings');
       }
 
-      const providersData = await providersRes.json();
-      const tasksData = await tasksRes.json();
+      const providersData = (await providersRes.json()) as IProviderResponse[];
+      const tasksData = (await tasksRes.json()) as ITaskAssignment[];
 
       setProviders(providersData);
       setTasks(tasksData);

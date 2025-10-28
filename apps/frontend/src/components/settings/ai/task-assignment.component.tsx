@@ -62,7 +62,7 @@ export function TaskAssignmentPanel({
    * @param provider - Provider object with name and type
    * @returns Formatted provider label
    */
-  function getProviderLabel(provider: any): string {
+  function getProviderLabel(provider: IProviderResponse | undefined): string {
     if (!provider) {
       return 'Unknown Provider';
     }
@@ -75,7 +75,7 @@ export function TaskAssignmentPanel({
    * @param task - Task assignment to edit, or null for new configuration
    * @param taskType - Task type to edit (required when task is null)
    */
-  function startEditing(task: any, taskType?: string) {
+  function startEditing(task: ITaskAssignment | null, taskType?: string) {
     const type = task?.taskType || taskType;
     if (!type) return; // Safety check
 
@@ -94,11 +94,14 @@ export function TaskAssignmentPanel({
 
   /**
    * Handle form field changes
+   * @param taskType - The task type being edited
+   * @param field - The form field name (providerId, model, fallbackProviderId, fallbackModel)
+   * @param value - The new field value
    */
   function handleChange(
     taskType: string,
     field: string,
-    value: any
+    value: string
   ) {
     setFormData((prev) => ({
       ...prev,
@@ -126,7 +129,13 @@ export function TaskAssignmentPanel({
 
       setIsSaving(true);
 
-      const payload: any = {
+      // Build strongly-typed payload for task assignment update
+      const payload: {
+        providerId: string;
+        model: string;
+        fallbackProviderId?: string;
+        fallbackModel?: string;
+      } = {
         providerId: data.providerId,
         model: data.model.trim(),
       };

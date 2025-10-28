@@ -158,14 +158,15 @@ export class AISettingsService {
     }
   ): Promise<ProviderResponseDto> {
     // Encrypt API key if provided, otherwise use empty string for keyless providers
+    const requiresKey = !['ollama', 'openai-compatible'].includes(data.type);
     let encryptedKey = '';
+
     if (data.apiKey && data.apiKey.trim().length > 0) {
       encryptedKey = this.encryptApiKey(data.apiKey);
-    } else if (data.type !== 'ollama') {
-      // Require API key for non-keyless providers
+    } else if (requiresKey) {
+      // Require API key for providers that mandate authentication
       throw new Error(`API key is required for ${data.type} provider`);
     }
-    // For ollama, empty key is allowed
 
     const provider = await this._prisma.aIProvider.create({
       data: {
@@ -493,17 +494,29 @@ export class AISettingsService {
    * @returns Validation result with available models if successful
    * @throws Error if decryption fails
    */
-  async validateProvider(provider: AIProvider): Promise<{
+  async validateProvider(
+    provider: AIProvider & { decryptedApiKey?: string }
+  ): Promise<{
     valid: boolean;
     error?: string;
     availableModels?: string[];
   }> {
     try {
-      // Decrypt API key for use in validation
-      const decryptedKey = this.decryptApiKey(provider.apiKey);
+      // Use decrypted API key when available, otherwise decrypt the stored value
+      let decryptedKey = provider.decryptedApiKey;
 
-      // Check that API key is not empty
-      if (!decryptedKey || decryptedKey.trim().length === 0) {
+      if (decryptedKey === undefined) {
+        if (!provider.apiKey) {
+          decryptedKey = '';
+        } else {
+          decryptedKey = this.decryptApiKey(provider.apiKey);
+        }
+      }
+
+      // Allow keyless providers (e.g., Ollama, some OpenAI-compatible deployments)
+      const requiresKey = !['ollama', 'openai-compatible'].includes(provider.type);
+
+      if (requiresKey && (!decryptedKey || decryptedKey.trim().length === 0)) {
         return { valid: false, error: 'API key is empty or invalid' };
       }
 

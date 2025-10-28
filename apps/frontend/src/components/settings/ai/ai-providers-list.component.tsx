@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import type { IProviderResponse } from '@gitroom/nestjs-libraries/src/dtos/ai/ai-provider.types';
 import { ProviderTestButton } from './provider-test-button.component';
 import { DiscoverModelsButton } from './discover-models-button.component';
 
@@ -13,7 +14,7 @@ export function AIProvidersList({
   onDelete,
   onRefresh,
 }: {
-  providers: any[];
+  providers: IProviderResponse[];
   onDelete: (providerId: string) => Promise<void>;
   onRefresh: () => Promise<void>;
 }) {
@@ -57,7 +58,7 @@ export function AIProvidersList({
   /**
    * Get test status badge
    */
-  function getTestStatusBadge(provider: any) {
+  function getTestStatusBadge(provider: IProviderResponse) {
     if (!provider.lastTestedAt) {
       return <span className="text-xs text-gray-500">Not tested</span>;
     }

@@ -104,7 +104,14 @@ export function AddProviderModal({
       setIsSubmitting(true);
 
       // Prepare data for API
-      const payload: any = {
+      const payload: {
+        name: string;
+        type: string;
+        apiKey?: string;
+        baseUrl?: string;
+        customConfig?: string;
+        isDefault: boolean;
+      } = {
         name: formData.name.trim(),
         type: formData.type,
         apiKey: formData.apiKey.trim() || undefined,
