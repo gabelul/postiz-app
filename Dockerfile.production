@@ -1,0 +1,88 @@
+# Production Dockerfile for Postiz
+# Builds from your private repository code with all security enhancements
+
+# Stage 1: Builder - Install dependencies and build
+FROM node:22-alpine AS builder
+
+ARG NEXT_PUBLIC_VERSION
+ENV NEXT_PUBLIC_VERSION=$NEXT_PUBLIC_VERSION
+
+# Install build dependencies
+RUN apk add --no-cache g++ make python3 bash git
+
+# Install pnpm
+RUN npm --no-update-notifier --no-fund --global install pnpm@10.6.1
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json pnpm-lock.yaml ./
+
+# Copy workspace packages
+COPY apps ./apps
+COPY libraries ./libraries
+COPY var ./var
+
+# Install all dependencies
+RUN pnpm install --frozen-lockfile
+
+# Copy entire project (including your security fixes)
+COPY . .
+
+# Generate Prisma client
+RUN pnpm run prisma-generate
+
+# Build all applications with increased memory
+RUN NODE_OPTIONS="--max-old-space-size=4096" pnpm run build
+
+# ============================================================================
+# Stage 2: Runtime - Minimal production image
+# ============================================================================
+FROM node:22-alpine
+
+ARG NEXT_PUBLIC_VERSION
+ENV NEXT_PUBLIC_VERSION=$NEXT_PUBLIC_VERSION
+ENV NODE_ENV=production
+
+# Install only runtime dependencies
+RUN apk add --no-cache bash curl dumb-init
+
+# Create application user (non-root for security)
+RUN adduser -D -g 'postiz' postiz || true
+RUN mkdir -p /app /uploads /var/log/postiz
+RUN chown -R postiz:postiz /app /uploads /var/log/postiz
+
+# Install pnpm and pm2 for process management
+RUN npm --no-update-notifier --no-fund --global install pnpm@10.6.1 pm2
+
+WORKDIR /app
+
+# Copy only necessary files from builder stage
+COPY --from=builder --chown=postiz:postiz /app/package.json /app/pnpm-lock.yaml ./
+COPY --from=builder --chown=postiz:postiz /app/apps ./apps
+COPY --from=builder --chown=postiz:postiz /app/libraries ./libraries
+COPY --from=builder --chown=postiz:postiz /app/prisma ./prisma
+COPY --from=builder --chown=postiz:postiz /app/node_modules ./node_modules
+COPY --from=builder --chown=postiz:postiz /app/.next ./.next
+
+# Create uploads directory
+RUN mkdir -p /uploads && chown -R postiz:postiz /uploads
+
+# Install production dependencies only
+RUN pnpm install --frozen-lockfile --prod
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:5000/health || exit 1
+
+# Switch to non-root user
+USER postiz
+
+# Expose only the Nginx port (3000 and 4200 are internal)
+EXPOSE 5000
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["/usr/sbin/dumb-init", "--"]
+
+# Start Nginx (from docker-compose or entrypoint) and PM2
+CMD ["sh", "-c", "pnpm run pm2-run"]
