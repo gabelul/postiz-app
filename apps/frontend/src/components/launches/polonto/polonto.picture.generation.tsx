@@ -3,7 +3,6 @@
 import React, { useCallback } from 'react';
 import { observer } from 'mobx-react-lite';
 import { InputGroup } from '@blueprintjs/core';
-import { Clean } from '@blueprintjs/icons';
 import { SectionTab } from 'polotno/side-panel';
 import { getImageSize } from 'polotno/utils/image';
 import { ImagesGrid } from 'polotno/side-panel/images-grid';
@@ -155,7 +154,8 @@ export const PictureGeneratorSection = {
   name: 'picture-generator-ai',
   Tab: (props: any) => (
     <SectionTab name="AI Img" {...props}>
-      <Clean />
+      {/* Icon representing AI image generation */}
+      <span>🎨</span>
     </SectionTab>
   ),
   // we need observer to update component automatically on any store changes

@@ -6,7 +6,6 @@ import {
   useWallet,
   WalletProvider as WalletProviderWrapper,
 } from '@solana/wallet-adapter-react';
-import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import {
   TorusWalletAdapter,
   BitgetWalletAdapter,
@@ -42,19 +41,34 @@ import { clusterApiUrl } from '@solana/web3.js';
 import '@solana/wallet-adapter-react-ui/styles.css';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { WalletUiProvider } from '@gitroom/frontend/components/auth/providers/placeholder/wallet.ui.provider';
+/**
+ * WalletProvider - Main wallet authentication component wrapper
+ * Sets up Solana wallet adapter providers and handles initial login flow
+ * @returns React component providing wallet authentication interface
+ */
 const WalletProvider = () => {
+  /**
+   * Navigate to login with Farcaster provider
+   * @param code - Authorization code from Farcaster
+   */
   const gotoLogin = useCallback(async (code: string) => {
     window.location.href = `/auth?provider=FARCASTER&code=${code}`;
   }, []);
   return <ButtonCaster login={gotoLogin} />;
 };
+/**
+ * ButtonCaster component - Renders the wallet connection interface
+ * @param props - Component props including login callback
+ * @returns React component for wallet connection
+ */
 export const ButtonCaster: FC<{
   login: (code: string) => void;
 }> = (props) => {
-  const network = WalletAdapterNetwork.Mainnet;
+  // Use 'mainnet-beta' as the Solana network (equivalent to WalletAdapterNetwork.Mainnet)
+  const network = 'mainnet-beta';
 
-  // You can also provide a custom RPC endpoint.
-  const endpoint = useMemo(() => clusterApiUrl(network), [network]);
+  // Generate the RPC endpoint URL for the specified network
+  const endpoint = useMemo(() => clusterApiUrl(network as any), [network]);
   const wallets = useMemo(
     () => [
       new TokenPocketWalletAdapter(),
@@ -94,9 +108,19 @@ export const ButtonCaster: FC<{
     </ConnectionProvider>
   );
 };
+/**
+ * DisabledAutoConnect - Prevents wallet auto-connection on mount
+ * Explicitly disconnects any auto-connected wallet and then allows manual connection
+ * @returns React component that initializes disconnected wallet state
+ */
 const DisabledAutoConnect = () => {
   const [connect, setConnect] = useState(false);
   const wallet = useWallet();
+
+  /**
+   * Handle wallet disconnection on component mount
+   * Ensures wallet starts in disconnected state despite auto-connect setting
+   */
   const toConnect = useCallback(async () => {
     try {
       wallet.select(null);
@@ -118,13 +142,25 @@ const DisabledAutoConnect = () => {
   }
   return <WalletUiProvider />;
 };
+/**
+ * InnerWallet - Handles wallet connection and authentication flow
+ * Manages wallet selection, signing, and backend challenge verification
+ * @returns React component for wallet interaction and authentication
+ */
 const InnerWallet = () => {
   const walletModal = useWalletModal();
   const wallet = useWallet();
   const fetch = useFetch();
-  // Get button state from wallet connection status
+
+  // Determine button state based on wallet connection status
   const buttonState = wallet?.connected ? 'connected' : 'disconnected';
+
+  /**
+   * Handle wallet authentication with backend challenge verification
+   * Retrieves challenge from backend, signs it with wallet, and redirects to auth with signed proof
+   */
   const connect = useCallback(async () => {
+    // Only proceed if wallet is already connected
     if (buttonState !== 'connected') {
       return;
     }
@@ -154,21 +190,11 @@ const InnerWallet = () => {
     }
   }, [wallet, buttonState]);
   useEffect(() => {
-    if (buttonState === 'has-wallet') {
-      wallet
-        .connect()
-        .then(() => {
-          /** empty */
-        })
-        .catch(() => {
-          wallet.select(null);
-          wallet.disconnect();
-        });
-    }
+    // Trigger authentication when wallet becomes connected
     if (buttonState === 'connected') {
       connect();
     }
-  }, [buttonState]);
+  }, [buttonState, connect]);
   return (
     <div onClick={() => walletModal.setVisible(true)}>
       <WalletUiProvider />

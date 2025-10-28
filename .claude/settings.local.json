@@ -3,7 +3,8 @@
     "allow": [
       "mcp__fetch-server__fetch",
       "Bash(bash test-build.sh:*)",
-      "Bash(tee:*)"
+      "Bash(tee:*)",
+      "Read(//private/tmp/postiz-public/**)"
     ],
     "deny": [],
     "ask": []
