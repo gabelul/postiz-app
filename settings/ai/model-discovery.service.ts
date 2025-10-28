@@ -1,13 +1,120 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { AIProvider } from '@prisma/client';
 
 /**
  * Service for discovering and caching available models from AI providers
  * Provides methods to fetch model lists from various AI provider APIs
+ * Implements SSRF prevention for safe URL fetching
  */
 @Injectable()
 export class ModelDiscoveryService {
   private readonly logger = new Logger(ModelDiscoveryService.name);
+
+  // List of allowed domains for API endpoints (whitelist approach)
+  private readonly ALLOWED_DOMAINS = [
+    'api.openai.com',
+    'generativelanguage.googleapis.com',
+    'api.together.xyz',
+    'localhost:11434', // Ollama default
+    '127.0.0.1:11434',
+  ];
+
+  // Private/internal IP ranges to block
+  private readonly BLOCKED_IP_PATTERNS = [
+    /^127\./,              // loopback
+    /^0\.0\.0\.0/,         // wildcard
+    /^10\./,               // private
+    /^172\.(1[6-9]|2[0-9]|3[01])\./, // private
+    /^192\.168\./,         // private
+    /^169\.254\./,         // link-local
+    /^fc00:|^fe80:/,       // IPv6 private
+  ];
+
+  // Timeout for API calls (10 seconds)
+  private readonly FETCH_TIMEOUT_MS = 10000;
+
+  /**
+   * Validate a URL to prevent SSRF attacks
+   * @param url - URL to validate
+   * @returns Validated URL
+   * @throws BadRequestException if URL is invalid or blocked
+   */
+  private validateUrl(urlString: string): URL {
+    try {
+      const url = new URL(urlString);
+
+      // Only allow HTTPS (and HTTP for localhost testing)
+      if (!['https:', 'http:'].includes(url.protocol)) {
+        throw new BadRequestException(`Invalid protocol: ${url.protocol}. Only HTTPS and HTTP are allowed.`);
+      }
+
+      if (url.protocol === 'http:' && !this.isLocalhost(url.hostname)) {
+        throw new BadRequestException(`HTTP is only allowed for localhost. Use HTTPS for remote URLs.`);
+      }
+
+      // Check hostname against private IP ranges
+      if (this.isPrivateIp(url.hostname)) {
+        throw new BadRequestException(`Access to private IP addresses is not allowed: ${url.hostname}`);
+      }
+
+      return url;
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException(`Invalid URL: ${urlString}`);
+    }
+  }
+
+  /**
+   * Check if hostname is localhost
+   */
+  private isLocalhost(hostname: string): boolean {
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
+  }
+
+  /**
+   * Check if IP address is in private range
+   */
+  private isPrivateIp(hostname: string): boolean {
+    // Remove port if present
+    const ip = hostname.split(':')[0];
+
+    // Check IPv4 private ranges
+    for (const pattern of this.BLOCKED_IP_PATTERNS) {
+      if (pattern.test(ip)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Safely fetch from a URL with timeout and validation
+   * @param url - URL to fetch from
+   * @param headers - HTTP headers
+   * @returns Fetch response
+   * @throws BadRequestException if URL is invalid
+   * @throws Error if fetch fails or times out
+   */
+  private async safeFetch(url: string, headers: Record<string, string>): Promise<Response> {
+    // Validate URL first
+    this.validateUrl(url);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.FETCH_TIMEOUT_MS);
+
+    try {
+      const response = await fetch(url, {
+        headers,
+        signal: controller.signal,
+      });
+      return response;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
 
   /**
    * Discover available models for a provider
@@ -49,10 +156,8 @@ export class ModelDiscoveryService {
    */
   private async discoverOpenAIModels(provider: AIProvider): Promise<string[]> {
     try {
-      const response = await fetch('https://api.openai.com/v1/models', {
-        headers: {
-          'Authorization': `Bearer ${provider.apiKey}`,
-        },
+      const response = await this.safeFetch('https://api.openai.com/v1/models', {
+        'Authorization': `Bearer ${provider.apiKey}`,
       });
 
       if (!response.ok) {
@@ -110,10 +215,8 @@ export class ModelDiscoveryService {
       const baseUrl = provider.baseUrl || 'https://generativelanguage.googleapis.com/openai/';
       const url = `${baseUrl}v1/models`;
 
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${provider.apiKey}`,
-        },
+      const response = await this.safeFetch(url, {
+        'Authorization': `Bearer ${provider.apiKey}`,
       });
 
       if (!response.ok) {
@@ -150,7 +253,7 @@ export class ModelDiscoveryService {
       const baseUrl = provider.baseUrl || 'http://localhost:11434';
       const url = `${baseUrl}/api/tags`;
 
-      const response = await fetch(url);
+      const response = await this.safeFetch(url, {});
 
       if (!response.ok) {
         throw new Error(`Ollama API returned status ${response.status}`);
@@ -185,10 +288,8 @@ export class ModelDiscoveryService {
       const baseUrl = provider.baseUrl || 'https://api.together.xyz';
       const url = `${baseUrl}/v1/models`;
 
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${provider.apiKey}`,
-        },
+      const response = await this.safeFetch(url, {
+        'Authorization': `Bearer ${provider.apiKey}`,
       });
 
       if (!response.ok) {
@@ -225,10 +326,8 @@ export class ModelDiscoveryService {
 
       const url = `${provider.baseUrl}/models`;
 
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${provider.apiKey}`,
-        },
+      const response = await this.safeFetch(url, {
+        'Authorization': `Bearer ${provider.apiKey}`,
       });
 
       if (!response.ok) {
