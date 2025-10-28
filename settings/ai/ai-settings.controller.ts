@@ -7,17 +7,21 @@ import {
   Body,
   Param,
   UseGuards,
-  Request,
+  BadRequestException,
 } from '@nestjs/common';
+import { Organization } from '@prisma/client';
 import { AISettingsService } from './ai-settings.service';
 import { ModelDiscoveryService } from './model-discovery.service';
+import { GetOrgFromRequest } from '@gitroom/nestjs-libraries/user/org.from.request';
+import { PoliciesGuard } from '@gitroom/backend/services/auth/permissions/permissions.guard';
 
 /**
  * Controller for managing AI provider settings
  * Provides endpoints for CRUD operations on AI providers and task assignments
+ * All endpoints require authentication and organization context
  */
 @Controller('api/settings/ai')
-@UseGuards() // Add appropriate guards (auth guards, etc.)
+@UseGuards(PoliciesGuard)
 export class AISettingsController {
   constructor(
     private _aiSettingsService: AISettingsService,
@@ -29,9 +33,9 @@ export class AISettingsController {
    * GET /api/settings/ai/providers
    */
   @Get('providers')
-  async getProviders(@Request() req: any) {
-    const organizationId = req.user?.organizationId;
-    return this._aiSettingsService.getProviders(organizationId);
+  async getProviders(@GetOrgFromRequest() org: Organization) {
+    this.validateOrganization(org);
+    return this._aiSettingsService.getProviders(org.id);
   }
 
   /**
@@ -39,9 +43,12 @@ export class AISettingsController {
    * GET /api/settings/ai/providers/:providerId
    */
   @Get('providers/:providerId')
-  async getProvider(@Request() req: any, @Param('providerId') providerId: string) {
-    const organizationId = req.user?.organizationId;
-    return this._aiSettingsService.getProvider(organizationId, providerId);
+  async getProvider(
+    @GetOrgFromRequest() org: Organization,
+    @Param('providerId') providerId: string
+  ) {
+    this.validateOrganization(org);
+    return this._aiSettingsService.getProvider(org.id, providerId);
   }
 
   /**
@@ -58,7 +65,7 @@ export class AISettingsController {
    */
   @Post('providers')
   async createProvider(
-    @Request() req: any,
+    @GetOrgFromRequest() org: Organization,
     @Body()
     body: {
       name: string;
@@ -69,8 +76,8 @@ export class AISettingsController {
       isDefault?: boolean;
     }
   ) {
-    const organizationId = req.user?.organizationId;
-    return this._aiSettingsService.createProvider(organizationId, body);
+    this.validateOrganization(org);
+    return this._aiSettingsService.createProvider(org.id, body);
   }
 
   /**
@@ -80,12 +87,12 @@ export class AISettingsController {
    */
   @Put('providers/:providerId')
   async updateProvider(
-    @Request() req: any,
+    @GetOrgFromRequest() org: Organization,
     @Param('providerId') providerId: string,
     @Body() body: any
   ) {
-    const organizationId = req.user?.organizationId;
-    return this._aiSettingsService.updateProvider(organizationId, providerId, body);
+    this.validateOrganization(org);
+    return this._aiSettingsService.updateProvider(org.id, providerId, body);
   }
 
   /**
@@ -93,9 +100,12 @@ export class AISettingsController {
    * DELETE /api/settings/ai/providers/:providerId
    */
   @Delete('providers/:providerId')
-  async deleteProvider(@Request() req: any, @Param('providerId') providerId: string) {
-    const organizationId = req.user?.organizationId;
-    return this._aiSettingsService.deleteProvider(organizationId, providerId);
+  async deleteProvider(
+    @GetOrgFromRequest() org: Organization,
+    @Param('providerId') providerId: string
+  ) {
+    this.validateOrganization(org);
+    return this._aiSettingsService.deleteProvider(org.id, providerId);
   }
 
   /**
@@ -105,12 +115,12 @@ export class AISettingsController {
    */
   @Post('providers/:providerId/test')
   async testProvider(
-    @Request() req: any,
+    @GetOrgFromRequest() org: Organization,
     @Param('providerId') providerId: string,
     @Body() body?: { model?: string }
   ) {
-    const organizationId = req.user?.organizationId;
-    const provider = await this._aiSettingsService.getProvider(organizationId, providerId);
+    this.validateOrganization(org);
+    const provider = await this._aiSettingsService.getProvider(org.id, providerId);
 
     if (!provider) {
       return { valid: false, error: 'Provider not found' };
@@ -122,7 +132,7 @@ export class AISettingsController {
     if (!validation.valid) {
       // Update provider with test failure
       await this._aiSettingsService.updateProviderTestStatus(
-        organizationId,
+        org.id,
         providerId,
         'FAILED',
         validation.error
@@ -132,7 +142,7 @@ export class AISettingsController {
 
     // Update provider with test success
     await this._aiSettingsService.updateProviderTestStatus(
-      organizationId,
+      org.id,
       providerId,
       'SUCCESS'
     );
@@ -152,9 +162,9 @@ export class AISettingsController {
    * Returns image, text, video-slides, and agent task assignments
    */
   @Get('tasks')
-  async getTaskAssignments(@Request() req: any) {
-    const organizationId = req.user?.organizationId;
-    return this._aiSettingsService.getTaskAssignments(organizationId);
+  async getTaskAssignments(@GetOrgFromRequest() org: Organization) {
+    this.validateOrganization(org);
+    return this._aiSettingsService.getTaskAssignments(org.id);
   }
 
   /**
@@ -163,11 +173,11 @@ export class AISettingsController {
    */
   @Get('tasks/:taskType')
   async getTaskAssignment(
-    @Request() req: any,
+    @GetOrgFromRequest() org: Organization,
     @Param('taskType') taskType: string
   ) {
-    const organizationId = req.user?.organizationId;
-    return this._aiSettingsService.getTaskAssignment(organizationId, taskType);
+    this.validateOrganization(org);
+    return this._aiSettingsService.getTaskAssignment(org.id, taskType);
   }
 
   /**
@@ -182,7 +192,7 @@ export class AISettingsController {
    */
   @Put('tasks/:taskType')
   async updateTaskAssignment(
-    @Request() req: any,
+    @GetOrgFromRequest() org: Organization,
     @Param('taskType') taskType: string,
     @Body()
     body: {
@@ -192,8 +202,8 @@ export class AISettingsController {
       fallbackModel?: string;
     }
   ) {
-    const organizationId = req.user?.organizationId;
-    return this._aiSettingsService.updateTaskAssignment(organizationId, taskType, body);
+    this.validateOrganization(org);
+    return this._aiSettingsService.updateTaskAssignment(org.id, taskType, body);
   }
 
   /**
@@ -202,10 +212,13 @@ export class AISettingsController {
    * Tests the provider and model assigned to a task
    */
   @Post('tasks/:taskType/test')
-  async testTaskAssignment(@Request() req: any, @Param('taskType') taskType: string) {
-    const organizationId = req.user?.organizationId;
+  async testTaskAssignment(
+    @GetOrgFromRequest() org: Organization,
+    @Param('taskType') taskType: string
+  ) {
+    this.validateOrganization(org);
     const assignment = await this._aiSettingsService.getTaskAssignment(
-      organizationId,
+      org.id,
       taskType
     );
 
@@ -239,9 +252,12 @@ export class AISettingsController {
    * Stores the result in the provider's availableModels field
    */
   @Post('providers/:providerId/discover-models')
-  async discoverModels(@Request() req: any, @Param('providerId') providerId: string) {
-    const organizationId = req.user?.organizationId;
-    const provider = await this._aiSettingsService.getProvider(organizationId, providerId);
+  async discoverModels(
+    @GetOrgFromRequest() org: Organization,
+    @Param('providerId') providerId: string
+  ) {
+    this.validateOrganization(org);
+    const provider = await this._aiSettingsService.getProvider(org.id, providerId);
 
     if (!provider) {
       return { success: false, error: 'Provider not found' };
@@ -253,7 +269,7 @@ export class AISettingsController {
 
       // Save the discovered models to the provider
       if (models.length > 0) {
-        await this._aiSettingsService.updateProvider(organizationId, providerId, {
+        await this._aiSettingsService.updateProvider(org.id, providerId, {
           availableModels: JSON.stringify(models),
         });
       }
@@ -277,7 +293,11 @@ export class AISettingsController {
    * Returns default models when discovery is not possible
    */
   @Get('models/defaults/:providerType')
-  async getDefaultModels(@Param('providerType') providerType: string) {
+  async getDefaultModels(
+    @GetOrgFromRequest() org: Organization,
+    @Param('providerType') providerType: string
+  ) {
+    this.validateOrganization(org);
     const models = this._modelDiscoveryService.getDefaultModels(providerType);
 
     return {
@@ -285,5 +305,17 @@ export class AISettingsController {
       models,
       source: 'default',
     };
+  }
+
+  /**
+   * Validate organization context from request
+   * Throws BadRequestException if organization is missing
+   * @param org - Organization from request context
+   * @throws BadRequestException if organization is missing or invalid
+   */
+  private validateOrganization(org: Organization): void {
+    if (!org || !org.id) {
+      throw new BadRequestException('Organization context is required');
+    }
   }
 }
