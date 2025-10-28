@@ -10,6 +10,7 @@ import {
   Request,
 } from '@nestjs/common';
 import { AISettingsService } from './ai-settings.service';
+import { ModelDiscoveryService } from './model-discovery.service';
 
 /**
  * Controller for managing AI provider settings
@@ -18,7 +19,10 @@ import { AISettingsService } from './ai-settings.service';
 @Controller('api/settings/ai')
 @UseGuards() // Add appropriate guards (auth guards, etc.)
 export class AISettingsController {
-  constructor(private _aiSettingsService: AISettingsService) {}
+  constructor(
+    private _aiSettingsService: AISettingsService,
+    private _modelDiscoveryService: ModelDiscoveryService
+  ) {}
 
   /**
    * Get all AI providers for the organization
@@ -225,6 +229,61 @@ export class AISettingsController {
       provider: assignment.provider.name,
       model: assignment.model,
       taskType,
+    };
+  }
+
+  /**
+   * Discover available models for a provider
+   * POST /api/settings/ai/providers/:providerId/discover-models
+   * Fetches available models from the provider API
+   * Stores the result in the provider's availableModels field
+   */
+  @Post('providers/:providerId/discover-models')
+  async discoverModels(@Request() req: any, @Param('providerId') providerId: string) {
+    const organizationId = req.user?.organizationId;
+    const provider = await this._aiSettingsService.getProvider(organizationId, providerId);
+
+    if (!provider) {
+      return { success: false, error: 'Provider not found' };
+    }
+
+    try {
+      // Discover models from the provider
+      const models = await this._modelDiscoveryService.discoverModels(provider);
+
+      // Save the discovered models to the provider
+      if (models.length > 0) {
+        await this._aiSettingsService.updateProvider(organizationId, providerId, {
+          availableModels: JSON.stringify(models),
+        });
+      }
+
+      return {
+        success: true,
+        models,
+        message: `Discovered ${models.length} models`,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to discover models',
+      };
+    }
+  }
+
+  /**
+   * Get default models for a provider type
+   * GET /api/settings/ai/models/defaults/:providerType
+   * Returns default models when discovery is not possible
+   */
+  @Get('models/defaults/:providerType')
+  async getDefaultModels(@Param('providerType') providerType: string) {
+    const models = this._modelDiscoveryService.getDefaultModels(providerType);
+
+    return {
+      providerType,
+      models,
+      source: 'default',
     };
   }
 }

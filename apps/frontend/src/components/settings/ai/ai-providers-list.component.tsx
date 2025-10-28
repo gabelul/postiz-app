@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { ProviderTestButton } from './provider-test-button.component';
+import { DiscoverModelsButton } from './discover-models-button.component';
 
 /**
  * Component for displaying and managing the list of AI providers
@@ -146,6 +147,11 @@ export function AIProvidersList({
             {/* Actions */}
             <div className="flex gap-2">
               <ProviderTestButton
+                providerId={provider.id}
+                onSuccess={onRefresh}
+              />
+
+              <DiscoverModelsButton
                 providerId={provider.id}
                 onSuccess={onRefresh}
               />
