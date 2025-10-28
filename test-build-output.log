@@ -1,0 +1,79 @@
+========================================
+Postiz Docker Build Test
+========================================
+✓ Docker and Docker Compose found
+
+Step 1: Checking Dockerfile.production...
+✓ Dockerfile.production found
+
+Step 2: Building Docker image from Dockerfile.production...
+This may take several minutes...
+
+#0 building with "orbstack" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile.production
+#1 transferring dockerfile: 4.22kB done
+#1 DONE 0.1s
+
+#2 [internal] load metadata for docker.io/library/node:22-alpine
+#2 DONE 2.1s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 500B done
+#3 DONE 0.1s
+
+#4 [builder  1/13] FROM docker.io/library/node:22-alpine@sha256:bd26af08779f746650d95a2e4d653b0fd3c8030c44284b6b98d701c9b5eb66b9
+#4 resolve docker.io/library/node:22-alpine@sha256:bd26af08779f746650d95a2e4d653b0fd3c8030c44284b6b98d701c9b5eb66b9 0.0s done
+#4 ...
+
+#5 [internal] load build context
+#5 transferring context: 7.98MB 0.1s done
+#5 DONE 0.1s
+
+#6 [builder  4/13] WORKDIR /app
+#6 CACHED
+
+#7 [builder  7/13] COPY apps ./apps
+#7 CACHED
+
+#8 [builder  8/13] COPY libraries ./libraries
+#8 CACHED
+
+#9 [builder  2/13] RUN apk add --no-cache g++ make python3 bash git
+#9 CACHED
+
+#10 [builder  5/13] COPY pnpm-workspace.yaml pnpm-lock.yaml ./
+#10 CACHED
+
+#11 [builder  3/13] RUN npm --no-update-notifier --no-fund --global install pnpm@10.6.1
+#11 CACHED
+
+#12 [builder  6/13] COPY package.json ./
+#12 CACHED
+
+#13 [builder  9/13] COPY prisma ./prisma
+#13 ERROR: failed to calculate checksum of ref e10fb5d7-d290-41be-9c75-d419a8c8b013::sg0hgbhmb48fxq9xvgt4srlgz: "/prisma": not found
+
+#4 [builder  1/13] FROM docker.io/library/node:22-alpine@sha256:bd26af08779f746650d95a2e4d653b0fd3c8030c44284b6b98d701c9b5eb66b9
+#4 sha256:1494ccb64b72be65db13e78aad33d614e4078f672c3399db06cde39a75322619 0B / 1.26MB 0.1s
+#4 sha256:c712bb59ac9f218f1661be129544be352c4c1f3b385441cb58383d0248eace15 0B / 446B 0.1s
+#4 sha256:bd26af08779f746650d95a2e4d653b0fd3c8030c44284b6b98d701c9b5eb66b9 6.41kB / 6.41kB done
+#4 sha256:d31216005bd330aa47f848822d4f269f6c79f0905b60cca1d87577149519daa6 1.72kB / 1.72kB done
+#4 sha256:8fb3a1bbc53fcc3da0507f0fa83332034ec69a6c62a740a0121e740ab30f9b96 6.44kB / 6.44kB done
+#4 sha256:a110d1eff85dcd1174fbd88a54b5dcfe3e1e9457def04b99a5c8464eb4974a8b 0B / 51.25MB 0.1s
+#4 CANCELED
+------
+ > [builder  9/13] COPY prisma ./prisma:
+------
+Dockerfile.production:28
+--------------------
+  26 |     COPY apps ./apps
+  27 |     COPY libraries ./libraries
+  28 | >>> COPY prisma ./prisma
+  29 |     
+  30 |     # Install all dependencies (pnpm resolves workspace correctly)
+--------------------
+ERROR: failed to build: failed to solve: failed to compute cache key: failed to calculate checksum of ref e10fb5d7-d290-41be-9c75-d419a8c8b013::sg0hgbhmb48fxq9xvgt4srlgz: "/prisma": not found
+
+✗ Docker build failed!
+  Check the error messages above.

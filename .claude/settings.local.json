@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "mcp__fetch-server__fetch"
+      "mcp__fetch-server__fetch",
+      "Bash(bash test-build.sh:*)",
+      "Bash(tee:*)"
     ],
     "deny": [],
     "ask": []
