@@ -111,9 +111,10 @@ export class AISettingsService {
   /**
    * Get provider with decrypted API key (internal use only)
    * WARNING: Only use this internally when you need the actual API key
+   * Handles both encrypted keys and keyless providers (empty string keys)
    * @param organizationId - Organization ID
    * @param providerId - Provider ID
-   * @returns AI provider with decrypted apiKey
+   * @returns AI provider with decrypted apiKey (empty string for keyless providers)
    * @private
    */
   async getProviderInternal(
@@ -132,9 +133,16 @@ export class AISettingsService {
       return null;
     }
 
+    // For keyless providers (Ollama, OpenAI-compatible), apiKey is empty string
+    // Skip decryption and set decryptedApiKey to empty string
+    let decryptedApiKey = '';
+    if (provider.apiKey && provider.apiKey.trim().length > 0) {
+      decryptedApiKey = this.decryptApiKey(provider.apiKey);
+    }
+
     return {
       ...provider,
-      decryptedApiKey: this.decryptApiKey(provider.apiKey),
+      decryptedApiKey,
     };
   }
 

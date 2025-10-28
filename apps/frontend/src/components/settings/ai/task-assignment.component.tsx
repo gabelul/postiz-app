@@ -8,6 +8,17 @@ import type {
 } from '@gitroom/nestjs-libraries/src/dtos/ai/ai-provider.types';
 
 /**
+ * Form data for task assignment configuration
+ * Contains provider selection and model names for both primary and fallback providers
+ */
+interface TaskFormData {
+  providerId: string;
+  model: string;
+  fallbackProviderId: string;
+  fallbackModel: string;
+}
+
+/**
  * Component for assigning AI providers and models to different tasks
  * Allows users to configure:
  * - Image generation (DALL-E, etc.)
@@ -26,7 +37,7 @@ export function TaskAssignmentPanel({
   onUpdate: () => void;
 }) {
   const [editingTask, setEditingTask] = useState<string | null>(null);
-  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [formData, setFormData] = useState<Record<string, TaskFormData>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

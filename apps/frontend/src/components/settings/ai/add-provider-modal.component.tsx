@@ -3,6 +3,19 @@
 import React, { useState } from 'react';
 
 /**
+ * Form data for adding a new AI provider
+ * All string fields allow empty values for keyless providers
+ */
+interface ProviderFormData {
+  name: string;
+  type: string;
+  apiKey: string;
+  baseUrl: string;
+  customConfig: string;
+  isDefault: boolean;
+}
+
+/**
  * Modal component for adding a new AI provider
  * Allows users to configure provider details including:
  * - Name, Type, API Key
@@ -16,7 +29,7 @@ export function AddProviderModal({
   onClose: () => void;
   onSuccess: () => void;
 }) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ProviderFormData>({
     name: '',
     type: 'openai',
     apiKey: '',
@@ -97,7 +110,10 @@ export function AddProviderModal({
       if (!formData.name.trim()) {
         throw new Error('Provider name is required');
       }
-      if (!formData.apiKey.trim() && formData.type !== 'ollama') {
+
+      // Keyless providers: ollama and openai-compatible
+      const keylessProviders = ['ollama', 'openai-compatible'];
+      if (!formData.apiKey.trim() && !keylessProviders.includes(formData.type)) {
         throw new Error('API key is required for this provider type');
       }
 
@@ -200,7 +216,7 @@ export function AddProviderModal({
           </div>
 
           {/* API Key */}
-          {formData.type !== 'ollama' && (
+          {!['ollama', 'openai-compatible'].includes(formData.type) && (
             <div>
               <label className="block text-sm font-medium mb-2">
                 API Key <span className="text-red-600">*</span>
