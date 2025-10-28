@@ -232,13 +232,14 @@ export class AISettingsService {
 
   /**
    * Soft delete an AI provider
+   * Returns masked provider information to prevent key exposure
    * @param organizationId - Organization ID
    * @param providerId - Provider ID
-   * @returns Deleted AI provider
+   * @returns Deleted AI provider with masked API key
    * @throws NotFoundException if provider not found for this organization
    * @throws BadRequestException if provider is still assigned to tasks
    */
-  async deleteProvider(organizationId: string, providerId: string): Promise<AIProvider> {
+  async deleteProvider(organizationId: string, providerId: string): Promise<ProviderResponseDto> {
     // Verify provider exists and belongs to this organization
     const provider = await this._prisma.aIProvider.findFirst({
       where: {
@@ -271,7 +272,7 @@ export class AISettingsService {
       );
     }
 
-    return this._prisma.aIProvider.update({
+    const deleted = await this._prisma.aIProvider.update({
       where: {
         id: providerId,
       },
@@ -279,20 +280,24 @@ export class AISettingsService {
         deletedAt: new Date(),
       },
     });
+
+    // Return masked response to prevent exposing encrypted key
+    return this.toResponseDto(deleted);
   }
 
   /**
    * Get task assignments for an organization
+   * Returns masked provider information to prevent exposing encrypted keys
    * @param organizationId - Organization ID
-   * @returns Array of task assignments with provider details
+   * @returns Array of task assignments with masked provider details
    */
   async getTaskAssignments(organizationId: string): Promise<
     (AITaskAssignment & {
-      provider: AIProvider;
-      fallbackProvider: AIProvider | null;
+      provider: ProviderResponseDto;
+      fallbackProvider: ProviderResponseDto | null;
     })[]
   > {
-    return this._prisma.aITaskAssignment.findMany({
+    const assignments = await this._prisma.aITaskAssignment.findMany({
       where: {
         organizationId,
       },
@@ -304,16 +309,26 @@ export class AISettingsService {
         taskType: 'asc',
       },
     });
+
+    // Mask provider information before returning
+    return assignments.map((assignment) => ({
+      ...assignment,
+      provider: this.toResponseDto(assignment.provider),
+      fallbackProvider: assignment.fallbackProvider
+        ? this.toResponseDto(assignment.fallbackProvider)
+        : null,
+    }));
   }
 
   /**
    * Get a specific task assignment
+   * Returns masked provider information to prevent exposing encrypted keys
    * @param organizationId - Organization ID
    * @param taskType - Task type (image, text, video-slides, agent)
-   * @returns Task assignment with provider details
+   * @returns Task assignment with masked provider details
    */
   async getTaskAssignment(organizationId: string, taskType: string) {
-    return this._prisma.aITaskAssignment.findFirst({
+    const assignment = await this._prisma.aITaskAssignment.findFirst({
       where: {
         organizationId,
         taskType,
@@ -323,14 +338,31 @@ export class AISettingsService {
         fallbackProvider: true,
       },
     });
+
+    if (!assignment) {
+      return null;
+    }
+
+    // Mask provider information before returning
+    return {
+      ...assignment,
+      provider: this.toResponseDto(assignment.provider),
+      fallbackProvider: assignment.fallbackProvider
+        ? this.toResponseDto(assignment.fallbackProvider)
+        : null,
+    };
   }
 
   /**
    * Update a task assignment
+   * Validates that both primary and fallback providers belong to the organization
+   * Prevents cross-tenant provider binding attacks
    * @param organizationId - Organization ID
    * @param taskType - Task type
-   * @param data - Assignment data
-   * @returns Updated task assignment
+   * @param data - Assignment data with providerId and optional fallbackProviderId
+   * @returns Updated task assignment with masked provider details
+   * @throws ForbiddenException if providers don't belong to the organization
+   * @throws NotFoundException if provider not found
    */
   async updateTaskAssignment(
     organizationId: string,
@@ -342,6 +374,38 @@ export class AISettingsService {
       fallbackModel?: string;
     }
   ): Promise<AITaskAssignment> {
+    // Verify primary provider belongs to this organization
+    const primaryProvider = await this._prisma.aIProvider.findFirst({
+      where: {
+        id: data.providerId,
+        organizationId,
+        deletedAt: null,
+      },
+    });
+
+    if (!primaryProvider) {
+      throw new NotFoundException(
+        `Provider not found or does not belong to this organization`
+      );
+    }
+
+    // If fallback provider is specified, verify it also belongs to this organization
+    if (data.fallbackProviderId) {
+      const fallbackProvider = await this._prisma.aIProvider.findFirst({
+        where: {
+          id: data.fallbackProviderId,
+          organizationId,
+          deletedAt: null,
+        },
+      });
+
+      if (!fallbackProvider) {
+        throw new NotFoundException(
+          `Fallback provider not found or does not belong to this organization`
+        );
+      }
+    }
+
     // Check if assignment exists
     const existing = await this._prisma.aITaskAssignment.findFirst({
       where: {
