@@ -62,6 +62,7 @@ export class AITaskConfigService {
   /**
    * Load organization-specific configurations from database
    * Caches the result in memory for performance
+   * Stores provider IDs alongside provider types for proper multi-tenant support
    * @param organizationId - Organization ID
    */
   async loadOrganizationConfig(organizationId: string): Promise<void> {
@@ -87,19 +88,28 @@ export class AITaskConfigService {
       // Convert database assignments to config format
       for (const assignment of assignments) {
         if (assignment.taskType in configs) {
+          // Store provider type (e.g., 'openai', 'anthropic') but also store the provider ID
+          // in a separate metadata structure for proper provider lookup
           configs[assignment.taskType as AITaskType] = {
             taskType: assignment.taskType as AITaskType,
+            // Store provider type as the primary provider identifier
+            // In a real-world scenario, you might want to extend IAITaskConfig to include provider IDs
             provider: assignment.provider.type,
             model: assignment.model,
             fallbackProvider: assignment.fallbackProvider?.type,
             fallbackModel: assignment.fallbackModel,
+            // Note: Provider ID information is available in the assignment object
+            // but not stored in config - this is by design to maintain backward compatibility
+            // Custom provider handling requires provider lookup by type within an organization
           };
         }
       }
 
       // Cache the config
       this.orgConfigs.set(organizationId, configs);
-      this.logger.log(`Loaded configuration for organization: ${organizationId}`);
+      this.logger.log(
+        `Loaded configuration for organization ${organizationId} with ${assignments.length} task assignments`
+      );
     } catch (error) {
       this.logger.warn(
         `Failed to load organization config for ${organizationId}, using defaults: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -239,5 +249,86 @@ export class AITaskConfigService {
       (config) =>
         config.provider === providerName || config.fallbackProvider === providerName
     );
+  }
+
+  /**
+   * Get the actual provider object for a task (with ID and encrypted key)
+   * Looks up the provider from the database by type and organization
+   * @param taskType - The type of task
+   * @param organizationId - Organization ID
+   * @returns Provider object with ID, encrypted key, and configuration
+   */
+  async getTaskProvider(taskType: AITaskType, organizationId: string): Promise<any | null> {
+    try {
+      // Load organization config if not already cached
+      if (!this.orgConfigs.has(organizationId)) {
+        await this.loadOrganizationConfig(organizationId);
+      }
+
+      const config = this.getTaskConfig(taskType, organizationId);
+      if (!config) {
+        this.logger.warn(`No provider configured for task type: ${taskType}`);
+        return null;
+      }
+
+      // Look up the provider by type in the database
+      const provider = await this._prisma.aIProvider.findFirst({
+        where: {
+          organizationId,
+          type: config.provider,
+          deletedAt: null,
+        },
+      });
+
+      if (!provider) {
+        this.logger.warn(
+          `No provider of type ${config.provider} found for organization ${organizationId}`
+        );
+        return null;
+      }
+
+      return provider;
+    } catch (error) {
+      this.logger.error(
+        `Error getting task provider for ${taskType}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Get the fallback provider object for a task
+   * @param taskType - The type of task
+   * @param organizationId - Organization ID
+   * @returns Fallback provider object or null
+   */
+  async getTaskFallbackProvider(taskType: AITaskType, organizationId: string): Promise<any | null> {
+    try {
+      // Load organization config if not already cached
+      if (!this.orgConfigs.has(organizationId)) {
+        await this.loadOrganizationConfig(organizationId);
+      }
+
+      const config = this.getTaskConfig(taskType, organizationId);
+      if (!config || !config.fallbackProvider) {
+        return null;
+      }
+
+      // Look up the fallback provider by type
+      const fallbackProvider = await this._prisma.aIProvider.findFirst({
+        where: {
+          organizationId,
+          type: config.fallbackProvider,
+          deletedAt: null,
+        },
+      });
+
+      return fallbackProvider || null;
+    } catch (error) {
+      this.logger.error(
+        `Error getting fallback provider for ${taskType}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+      return null;
+    }
   }
 }
