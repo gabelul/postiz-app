@@ -107,6 +107,7 @@ export class AISettingsController {
    * Test an AI provider configuration
    * POST /api/settings/ai/providers/:providerId/test
    * Validates the API key and attempts to fetch available models
+   * Requires decrypted provider for validation to work correctly
    */
   @Post('providers/:providerId/test')
   async testProvider(
@@ -115,13 +116,17 @@ export class AISettingsController {
     @Body() body?: { model?: string }
   ) {
     this.validateOrganization(org);
-    const provider = await this._aiSettingsService.getProvider(org.id, providerId);
+
+    // Get provider with decrypted API key for validation
+    // This is necessary because validateProvider expects the encrypted key to decrypt it
+    const provider = await this._aiSettingsService.getProviderInternal(org.id, providerId);
 
     if (!provider) {
       return { valid: false, error: 'Provider not found' };
     }
 
-    // Validate provider configuration
+    // Validate provider configuration using the raw provider with encrypted key
+    // validateProvider will decrypt the key and verify it
     const validation = await this._aiSettingsService.validateProvider(provider);
 
     if (!validation.valid) {
@@ -241,6 +246,7 @@ export class AISettingsController {
    * POST /api/settings/ai/providers/:providerId/discover-models
    * Fetches available models from the provider API
    * Stores the result in the provider's availableModels field
+   * Requires decrypted provider for API calls to work correctly
    */
   @Post('providers/:providerId/discover-models')
   async discoverModels(
@@ -248,14 +254,18 @@ export class AISettingsController {
     @Param('providerId') providerId: string
   ) {
     this.validateOrganization(org);
-    const provider = await this._aiSettingsService.getProvider(org.id, providerId);
+
+    // Get provider with decrypted API key for model discovery
+    // ModelDiscoveryService needs the raw provider with encrypted key to decrypt it
+    const provider = await this._aiSettingsService.getProviderInternal(org.id, providerId);
 
     if (!provider) {
       return { success: false, error: 'Provider not found' };
     }
 
     try {
-      // Discover models from the provider
+      // Discover models from the provider using raw provider object
+      // This ensures API calls have the correct decrypted credentials
       const models = await this._modelDiscoveryService.discoverModels(provider);
 
       // Save the discovered models to the provider
