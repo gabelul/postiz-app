@@ -15,13 +15,13 @@ This guide shows how to deploy Postiz as a Docker service on a server running Ce
 ```
 Your Domain (HTTPS)
         ↓
-Centminmod Nginx (Port 80/443)
+centminmod Nginx (Port 80/443)
         ↓
-Reverse Proxy → Docker Container (Port 5000)
+Reverse Proxy → Docker Container (Port 32456)
         ↓
-Postiz App (Internal Ports 3000, 4200)
+Postiz App (Backend Port 3000, Frontend Port 4200)
         ↓
-PostgreSQL + Redis (Docker Internal)
+PostgreSQL (Port 5432) + Redis (Port 6379)
 ```
 
 ## Step 1: Install Docker & Docker Compose
@@ -261,8 +261,10 @@ Create `/usr/local/nginx/conf/conf.d/postiz.yourdomain.com.conf`:
 ```nginx
 # Upstream definition (backend service)
 upstream postiz_backend {
-    # Point to the docker container (running on localhost:5000)
-    server 127.0.0.1:5000;
+    # Point to the docker container running the Postiz app
+    # Docker exposes backend on port 32456 (random high port to avoid conflicts)
+    # Configure this port in docker-compose.prod.yml: ports: - "32456:3000"
+    server 127.0.0.1:32456;
     keepalive 32;
 }
 

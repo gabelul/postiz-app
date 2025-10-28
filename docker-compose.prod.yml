@@ -112,9 +112,11 @@ services:
       # === Performance Configuration (Optional) ===
       MAX_WORKERS: ${MAX_WORKERS:-4}
 
-    # Ports are not exposed - Centminmod Nginx connects to Docker network
-    # Backend (3000) and Frontend (4200) run internally
-    # Centminmod reverse proxy forwards to this container via Docker network
+    # Expose backend on a random high port for Centminmod to reverse proxy to
+    # Use a non-standard port (32456) to avoid conflicts
+    # Centminmod Nginx will proxy requests to postiz-app:32456
+    ports:
+      - "32456:3000"
 
     volumes:
       # Persistent uploads directory

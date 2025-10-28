@@ -25,10 +25,11 @@ COPY package.json ./
 # Copy all workspace packages (needed for pnpm to resolve dependencies)
 COPY apps ./apps
 COPY libraries ./libraries
-COPY prisma ./prisma
+# Note: Prisma schema is in libraries/nestjs-libraries/src/database/prisma
 
 # Install all dependencies (pnpm resolves workspace correctly)
-RUN pnpm install --frozen-lockfile
+# Use --no-frozen-lockfile because configuration may differ between environments
+RUN pnpm install --no-frozen-lockfile
 
 # Copy remaining project files
 COPY . .
@@ -71,7 +72,7 @@ COPY --from=builder --chown=postiz:postiz /app/package.json /app/pnpm-lock.yaml 
 # Copy all workspace packages
 COPY --from=builder --chown=postiz:postiz /app/apps ./apps
 COPY --from=builder --chown=postiz:postiz /app/libraries ./libraries
-COPY --from=builder --chown=postiz:postiz /app/prisma ./prisma
+# Prisma schema is in libraries/nestjs-libraries/src/database/prisma
 
 # Copy built applications (Next.js outputs go to apps/frontend/.next and apps/backend/dist)
 COPY --from=builder --chown=postiz:postiz /app/apps/frontend/.next ./apps/frontend/.next
@@ -84,7 +85,7 @@ COPY --from=builder --chown=postiz:postiz /app/node_modules/.prisma ./node_modul
 
 # Install ONLY production dependencies (no dev deps)
 # This ensures smaller image size and no dev tools
-RUN pnpm install --frozen-lockfile --prod --no-optional
+RUN pnpm install --no-frozen-lockfile --prod --no-optional
 
 # Create uploads directory
 RUN mkdir -p /uploads && chown -R postiz:postiz /uploads
