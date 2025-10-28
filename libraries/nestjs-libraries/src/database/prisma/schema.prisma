@@ -42,6 +42,9 @@ model Organization {
   sets              Sets[]
   thirdParty        ThirdParty[]
   errors            Errors[]
+  // AI Provider Management
+  aiProviders       AIProvider[]
+  aiTaskAssignments AITaskAssignment[]
 }
 
 model Tags {
@@ -674,6 +677,78 @@ model Mentions {
 
   @@id([name, username, platform, image])
   @@index([createdAt])
+}
+
+/**
+ * AI Provider Configuration
+ * Stores configured AI providers for the organization (OpenAI, Anthropic, Gemini, custom, etc.)
+ */
+model AIProvider {
+  id             String               @id @default(uuid())
+  organizationId String
+  organization   Organization         @relation(fields: [organizationId], references: [id])
+
+  // Provider identification
+  name           String               // Display name (e.g., "My OpenAI", "Claude Enterprise")
+  type           String               // Provider type: openai, anthropic, openai-compatible, openrouter, gemini
+
+  // Configuration
+  apiKey         String               // Encrypted API key
+  baseUrl        String?              // Base URL (for OpenAI-compatible providers)
+  customConfig   String?              // JSON string for provider-specific settings
+
+  // Status
+  enabled        Boolean              @default(true)
+  isDefault      Boolean              @default(false) // Mark as default provider
+
+  // Metadata
+  availableModels String?              // JSON array of discovered models
+  lastTestedAt   DateTime?
+  testStatus     String?              // SUCCESS, FAILED, or null if not tested
+  testError      String?              // Error message if test failed
+
+  // Relations
+  taskAssignments AITaskAssignment[]
+  fallbackFor    AITaskAssignment[]   @relation("fallbackProvider")
+
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  deletedAt      DateTime?
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@index([type])
+  @@index([deletedAt])
+}
+
+/**
+ * AI Task Assignment
+ * Maps each task type (image, text, video, agent) to a provider and model
+ */
+model AITaskAssignment {
+  id                   String      @id @default(uuid())
+  organizationId       String
+  organization         Organization @relation(fields: [organizationId], references: [id])
+
+  // Task identification
+  taskType             String      // image, text, video-slides, agent
+
+  // Primary provider and model
+  providerId           String
+  provider             AIProvider  @relation(fields: [providerId], references: [id])
+  model                String      // Model name (e.g., dall-e-3, gpt-4.1, claude-3-opus)
+
+  // Fallback provider and model (optional)
+  fallbackProviderId   String?
+  fallbackProvider     AIProvider? @relation("fallbackProvider", fields: [fallbackProviderId], references: [id])
+  fallbackModel        String?     // Fallback model name
+
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  @@unique([organizationId, taskType])
+  @@index([organizationId])
+  @@index([taskType])
 }
 
 enum OrderStatus {
