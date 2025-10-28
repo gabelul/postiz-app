@@ -1,0 +1,18 @@
+{
+  "name": "postiz-app",
+  "description": "Custom tool selection for postiz-app",
+  "mode": "custom",
+  "tools": [
+    "consensus",
+    "codereview",
+    "chat",
+    "uiux",
+    "install_agents"
+  ],
+  "token_budget": 9419,
+  "estimated_tokens": 9419,
+  "project_type": "react",
+  "auto_created": false,
+  "created_date": "2025-09-27T10:48:08.209979",
+  "last_modified": "2025-09-27T10:48:08.210036"
+}

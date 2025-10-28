@@ -97,3 +97,5 @@ git checkout private-main
 - **`private-main`** ⭐ - Your default branch for private development
 - **`main`** - Clean upstream copy, used only for creating PRs to original project
 - **`feature/*`** - Feature branches for upstream contributions (branch from `main`)
+
+Never sign commit messages or anything else with your name!

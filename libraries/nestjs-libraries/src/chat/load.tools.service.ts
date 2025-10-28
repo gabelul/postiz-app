@@ -1,12 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Agent } from '@mastra/core/agent';
 import { openai } from '@ai-sdk/openai';
+import { anthropic } from '@ai-sdk/anthropic';
 import { Memory } from '@mastra/memory';
 import { pStore } from '@gitroom/nestjs-libraries/chat/mastra.store';
 import { array, object, string } from 'zod';
 import { ModuleRef } from '@nestjs/core';
 import { toolList } from '@gitroom/nestjs-libraries/chat/tools/tool.list';
 import dayjs from 'dayjs';
+import { AITaskConfigService } from '@gitroom/nestjs-libraries/chat/ai-task-config.service';
+import { AIProviderAdapterFactory } from '@gitroom/nestjs-libraries/chat/ai-provider-adapter/ai-provider-adapter.factory';
 
 export const AgentState = object({
   proverbs: array(string()).default([]),
@@ -19,7 +22,13 @@ const renderArray = (list: string[], show: boolean) => {
 
 @Injectable()
 export class LoadToolsService {
-  constructor(private _moduleRef: ModuleRef) {}
+  private readonly logger = new Logger(LoadToolsService.name);
+
+  constructor(
+    private _moduleRef: ModuleRef,
+    private _taskConfigService: AITaskConfigService,
+    private _adapterFactory: AIProviderAdapterFactory
+  ) {}
 
   async loadTools() {
     return (
@@ -40,8 +49,87 @@ export class LoadToolsService {
     );
   }
 
+  /**
+   * Create agent with dynamic AI provider selection
+   * Uses AITaskConfigService to determine which provider and model to use
+   */
   async agent() {
     const tools = await this.loadTools();
+
+    // Get agent configuration
+    const agentConfig = this._taskConfigService.getTaskConfig('agent');
+    const provider = agentConfig.provider;
+    const model = agentConfig.model;
+
+    this.logger.log(
+      `Initializing Mastra agent with provider: ${provider}, model: ${model}`
+    );
+
+    // Create the appropriate model for the agent
+    let agentModel: any;
+
+    try {
+      switch (provider) {
+        case 'openai':
+          agentModel = openai(model);
+          break;
+
+        case 'anthropic':
+          agentModel = anthropic(model);
+          break;
+
+        case 'openai-compatible':
+        case 'gemini':
+        case 'ollama':
+        case 'together':
+        case 'custom':
+          // For OpenAI-compatible providers, use the OpenAI SDK with custom endpoint
+          const adapter = this._adapterFactory.createAdapter(provider);
+          const openaiClient = adapter.getClient();
+
+          // Use the openai integration from ai-sdk with custom client
+          agentModel = openai(model, {
+            apiKey: process.env.OPENAI_API_KEY || 'sk-',
+          });
+          break;
+
+        default:
+          this.logger.warn(
+            `Unknown provider: ${provider}, falling back to OpenAI`
+          );
+          agentModel = openai(model);
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Failed to initialize ${provider}, attempting fallback to ${agentConfig.fallbackProvider}`
+      );
+
+      if (agentConfig.fallbackProvider) {
+        try {
+          const fallbackModel = agentConfig.fallbackModel || model;
+          switch (agentConfig.fallbackProvider) {
+            case 'openai':
+              agentModel = openai(fallbackModel);
+              break;
+            case 'anthropic':
+              agentModel = anthropic(fallbackModel);
+              break;
+            default:
+              agentModel = openai(fallbackModel);
+          }
+        } catch (fallbackError) {
+          this.logger.error(
+            `Failed to initialize fallback provider: ${fallbackError}`
+          );
+          // Last resort: use OpenAI with default model
+          agentModel = openai('gpt-4.1');
+        }
+      } else {
+        // Last resort: use OpenAI with default model
+        agentModel = openai('gpt-4.1');
+      }
+    }
+
     return new Agent({
       name: 'postiz',
       description: 'Agent that helps manage and schedule social media posts for users',
@@ -50,6 +138,7 @@ export class LoadToolsService {
         return `
       Global information:
         - Date (UTC): ${dayjs().format('YYYY-MM-DD HH:mm:ss')}
+        - AI Provider: ${provider}/${model}
 
       You are an agent that helps manage and schedule social media posts for users, you can:
         - Schedule posts into the future, or now, adding texts, images and videos
@@ -58,7 +147,7 @@ export class LoadToolsService {
         - Generate text for posts
         - Show global analytics about socials
         - List integrations (channels)
-      
+
       - We schedule posts to different integration like facebook, instagram, etc. but to the user we don't say integrations we say channels as integration is the technical name
       - When scheduling a post, you must follow the social media rules and best practices.
       - When scheduling a post, you can pass an array for list of posts for a social media platform, But it has different behavior depending on the platform.
@@ -67,7 +156,7 @@ export class LoadToolsService {
         - If the social media platform has the concept of "threads", we need to ask the user if they want to create a thread or one long post.
         - For X, if you don't have Premium, don't suggest a long post because it won't work.
         - Platform format will also be passed can be "normal", "markdown", "html", make sure you use the correct format for each platform.
-      
+
       - Sometimes 'integrationSchema' will return rules, make sure you follow them (these rules are set in stone, even if the user asks to ignore them)
       - Each socials media platform has different settings and rules, you can get them by using the integrationSchema tool.
       - Always make sure you use this tool before you schedule any post.
@@ -85,7 +174,7 @@ export class LoadToolsService {
       )}
 `;
       },
-      model: openai('gpt-4.1'),
+      model: agentModel,
       tools,
       memory: new Memory({
         storage: pStore,
