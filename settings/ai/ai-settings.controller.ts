@@ -17,6 +17,7 @@ import { ModelDiscoveryService } from './model-discovery.service';
 import { GetOrgFromRequest } from '@gitroom/nestjs-libraries/user/org.from.request';
 import { PoliciesGuard } from '@gitroom/backend/services/auth/permissions/permissions.guard';
 import { CreateProviderDto } from './dtos/create-provider.dto';
+import { UpdateProviderDto } from './dtos/update-provider.dto';
 import { UpdateTaskAssignmentDto } from './dtos/update-task-assignment.dto';
 
 /**
@@ -78,13 +79,22 @@ export class AISettingsController {
   /**
    * Update an AI provider
    * PUT /api/settings/ai/providers/:providerId
-   * Body: Partial provider configuration
+   * Validates all input data before updating provider configuration
+   * Only provided fields are updated, others remain unchanged
+   *
+   * @param org - Organization from request context
+   * @param providerId - Provider ID to update
+   * @param body - Partial provider configuration with validation
+   * @returns Updated provider with masked API key
+   * @throws BadRequestException if organization is missing or data is invalid
+   * @throws NotFoundException if provider not found
    */
   @Put('providers/:providerId')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   async updateProvider(
     @GetOrgFromRequest() org: Organization,
     @Param('providerId') providerId: string,
-    @Body() body: any
+    @Body() body: UpdateProviderDto
   ) {
     this.validateOrganization(org);
     return this._aiSettingsService.updateProvider(org.id, providerId, body);
