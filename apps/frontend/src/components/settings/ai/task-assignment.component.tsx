@@ -53,22 +53,35 @@ export function TaskAssignmentPanel({
 
   /**
    * Get provider label with type
+   * Returns a safe label even if provider is undefined
+   * @param provider - Provider object with name and type
+   * @returns Formatted provider label
    */
   function getProviderLabel(provider: any): string {
-    return `${provider.name} (${provider.type})`;
+    if (!provider) {
+      return 'Unknown Provider';
+    }
+    return `${provider.name || 'Unknown'} (${provider.type || 'unknown'})`;
   }
 
   /**
    * Start editing a task
+   * Handles both existing tasks and new task configurations
+   * @param task - Task assignment to edit, or null for new configuration
+   * @param taskType - Task type to edit (required when task is null)
    */
-  function startEditing(task: any) {
-    setEditingTask(task.taskType);
+  function startEditing(task: any, taskType?: string) {
+    const type = task?.taskType || taskType;
+    if (!type) return; // Safety check
+
+    setEditingTask(type);
     setFormData({
-      [task.taskType]: {
-        providerId: task.provider.id,
-        model: task.model,
-        fallbackProviderId: task.fallbackProvider?.id || '',
-        fallbackModel: task.fallbackModel || '',
+      [type]: {
+        // Use provider.id if task exists and has provider, otherwise use empty string
+        providerId: task?.provider?.id || '',
+        model: task?.model || '',
+        fallbackProviderId: task?.fallbackProvider?.id || '',
+        fallbackModel: task?.fallbackModel || '',
       },
     });
     setError(null);
@@ -367,7 +380,7 @@ export function TaskAssignmentPanel({
                   )}
 
                   <button
-                    onClick={() => startEditing(task || { taskType: taskType.type })}
+                    onClick={() => startEditing(task, taskType.type)}
                     className="px-4 py-2 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded hover:bg-blue-200 dark:hover:bg-blue-900/40 transition-colors"
                   >
                     {task ? 'Edit' : 'Configure'}
