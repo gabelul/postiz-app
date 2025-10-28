@@ -6,16 +6,17 @@ import {
   IsBoolean,
   MinLength,
   IsIn,
-  IsUrl,
+  ValidateIf,
 } from 'class-validator';
 
 /**
  * DTO for creating a new AI provider configuration
  * Validates all inputs to ensure data integrity and security
+ * Supports both authenticated and keyless providers (e.g., Ollama)
  */
 export class CreateProviderDto {
   /**
-   * Display name for the provider (e.g., "My OpenAI", "Production Claude")
+   * Display name for the provider (e.g., "My OpenAI", "Production Claude", "Local Ollama")
    * Must be a non-empty string with minimum 3 characters
    */
   @IsString()
@@ -35,17 +36,22 @@ export class CreateProviderDto {
 
   /**
    * API key for the provider (encrypted when stored)
-   * Must be a non-empty string with minimum 10 characters
+   * Required for most providers (openai, anthropic, gemini, together)
+   * Optional for keyless providers (ollama, openai-compatible with localhost)
+   * When provided, must be minimum 1 character to allow flexibility
+   *
+   * @ValidateIf - Only validated if provider requires authentication
    */
   @IsString()
-  @IsDefined()
+  @ValidateIf((o) => o.type !== 'ollama')
   @IsNotEmpty()
-  @MinLength(10)
-  apiKey: string;
+  @MinLength(1)
+  apiKey?: string;
 
   /**
-   * Base URL for custom endpoints (optional, mainly for OpenAI-compatible providers)
-   * If provided, must be a valid HTTPS URL (HTTP allowed for localhost)
+   * Base URL for custom endpoints (optional, mainly for OpenAI-compatible and Ollama providers)
+   * If provided, must be a valid URL (HTTPS for remote, HTTP for localhost)
+   * Example: 'http://localhost:11434' for Ollama
    */
   @IsOptional()
   @IsString()

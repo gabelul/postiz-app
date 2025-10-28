@@ -140,23 +140,32 @@ export class AISettingsService {
 
   /**
    * Create a new AI provider configuration
+   * Supports both authenticated and keyless providers
    * @param organizationId - Organization ID
-   * @param data - Provider configuration data (apiKey will be encrypted)
+   * @param data - Provider configuration data (apiKey will be encrypted if provided)
    * @returns Created AI provider (with masked apiKey)
+   * @throws Error if encryption fails or required fields are missing
    */
   async createProvider(
     organizationId: string,
     data: {
       name: string;
       type: string;
-      apiKey: string;
+      apiKey?: string;
       baseUrl?: string;
       customConfig?: string;
       isDefault?: boolean;
     }
   ): Promise<ProviderResponseDto> {
-    // Encrypt API key before storing
-    const encryptedKey = this.encryptApiKey(data.apiKey);
+    // Encrypt API key if provided, otherwise use empty string for keyless providers
+    let encryptedKey = '';
+    if (data.apiKey && data.apiKey.trim().length > 0) {
+      encryptedKey = this.encryptApiKey(data.apiKey);
+    } else if (data.type !== 'ollama') {
+      // Require API key for non-keyless providers
+      throw new Error(`API key is required for ${data.type} provider`);
+    }
+    // For ollama, empty key is allowed
 
     const provider = await this._prisma.aIProvider.create({
       data: {
