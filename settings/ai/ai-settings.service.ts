@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@gitroom/nestjs-libraries/database/prisma/prisma.service';
 import { AIProvider, AITaskAssignment } from '@prisma/client';
 
@@ -74,6 +74,7 @@ export class AISettingsService {
    * @param providerId - Provider ID
    * @param data - Updated provider data
    * @returns Updated AI provider
+   * @throws NotFoundException if provider not found for this organization
    */
   async updateProvider(
     organizationId: string,
@@ -92,6 +93,19 @@ export class AISettingsService {
       lastTestedAt: Date;
     }>
   ): Promise<AIProvider> {
+    // Verify provider exists and belongs to this organization
+    const provider = await this._prisma.aIProvider.findFirst({
+      where: {
+        id: providerId,
+        organizationId,
+        deletedAt: null,
+      },
+    });
+
+    if (!provider) {
+      throw new NotFoundException(`Provider not found`);
+    }
+
     return this._prisma.aIProvider.update({
       where: {
         id: providerId,
@@ -108,8 +122,42 @@ export class AISettingsService {
    * @param organizationId - Organization ID
    * @param providerId - Provider ID
    * @returns Deleted AI provider
+   * @throws NotFoundException if provider not found for this organization
+   * @throws BadRequestException if provider is still assigned to tasks
    */
   async deleteProvider(organizationId: string, providerId: string): Promise<AIProvider> {
+    // Verify provider exists and belongs to this organization
+    const provider = await this._prisma.aIProvider.findFirst({
+      where: {
+        id: providerId,
+        organizationId,
+        deletedAt: null,
+      },
+    });
+
+    if (!provider) {
+      throw new NotFoundException(`Provider not found`);
+    }
+
+    // Check if provider is assigned to any tasks
+    const tasksUsingProvider = await this._prisma.aITaskAssignment.findMany({
+      where: {
+        OR: [
+          { providerId },
+          { fallbackProviderId: providerId },
+        ],
+      },
+      select: {
+        taskType: true,
+      },
+    });
+
+    if (tasksUsingProvider.length > 0) {
+      throw new BadRequestException(
+        `Provider is currently assigned to tasks: ${tasksUsingProvider.map((t) => t.taskType).join(', ')}. Please reassign these tasks before deleting.`
+      );
+    }
+
     return this._prisma.aIProvider.update({
       where: {
         id: providerId,
@@ -219,6 +267,7 @@ export class AISettingsService {
    * @param testStatus - Test status (SUCCESS, FAILED)
    * @param testError - Optional error message
    * @returns Updated provider
+   * @throws NotFoundException if provider not found for this organization
    */
   async updateProviderTestStatus(
     organizationId: string,
@@ -226,6 +275,19 @@ export class AISettingsService {
     testStatus: 'SUCCESS' | 'FAILED',
     testError?: string
   ): Promise<AIProvider> {
+    // Verify provider exists and belongs to this organization
+    const provider = await this._prisma.aIProvider.findFirst({
+      where: {
+        id: providerId,
+        organizationId,
+        deletedAt: null,
+      },
+    });
+
+    if (!provider) {
+      throw new NotFoundException(`Provider not found`);
+    }
+
     return this._prisma.aIProvider.update({
       where: {
         id: providerId,
