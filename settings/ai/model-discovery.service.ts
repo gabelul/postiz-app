@@ -10,60 +10,22 @@ import { AIProvider } from '@prisma/client';
 export class ModelDiscoveryService {
   private readonly logger = new Logger(ModelDiscoveryService.name);
 
-  // List of allowed domains for API endpoints (whitelist approach)
-  private readonly ALLOWED_DOMAINS = [
-    'api.openai.com',
-    'generativelanguage.googleapis.com',
-    'api.together.xyz',
-    'localhost:11434', // Ollama default
-    '127.0.0.1:11434',
-  ];
-
-  // Private/internal IP ranges to block
-  private readonly BLOCKED_IP_PATTERNS = [
-    /^127\./,              // loopback
-    /^0\.0\.0\.0/,         // wildcard
-    /^10\./,               // private
-    /^172\.(1[6-9]|2[0-9]|3[01])\./, // private
-    /^192\.168\./,         // private
-    /^169\.254\./,         // link-local
-    /^fc00:|^fe80:/,       // IPv6 private
-  ];
-
   // Timeout for API calls (10 seconds)
   private readonly FETCH_TIMEOUT_MS = 10000;
 
   /**
-   * Validate a URL to prevent SSRF attacks
-   * Checks protocol, hostname against allowlist and blocked IP ranges
+   * Validate a URL to prevent malformed requests
    * @param url - URL to validate
    * @returns Validated URL
-   * @throws BadRequestException if URL is invalid or blocked
+   * @throws BadRequestException if URL is invalid or unsupported
    */
   private validateUrl(urlString: string): URL {
     try {
       const url = new URL(urlString);
 
-      // Only allow HTTPS (and HTTP for localhost testing)
+      // Only allow HTTP(S) requests
       if (!['https:', 'http:'].includes(url.protocol)) {
         throw new BadRequestException(`Invalid protocol: ${url.protocol}. Only HTTPS and HTTP are allowed.`);
-      }
-
-      if (url.protocol === 'http:' && !this.isLocalhost(url.hostname)) {
-        throw new BadRequestException(`HTTP is only allowed for localhost. Use HTTPS for remote URLs.`);
-      }
-
-      // Check hostname against private IP ranges
-      if (this.isPrivateIp(url.hostname)) {
-        throw new BadRequestException(`Access to private IP addresses is not allowed: ${url.hostname}`);
-      }
-
-      // For non-localhost URLs, verify against allowlist
-      if (!this.isLocalhost(url.hostname) && !this.ALLOWED_DOMAINS.includes(url.hostname)) {
-        this.logger.warn(`Attempted access to non-whitelisted domain: ${url.hostname}`);
-        throw new BadRequestException(
-          `Access to ${url.hostname} is not allowed. Only whitelisted domains are permitted.`
-        );
       }
 
       return url;
@@ -74,31 +36,6 @@ export class ModelDiscoveryService {
       throw new BadRequestException(`Invalid URL: ${urlString}`);
     }
   }
-
-  /**
-   * Check if hostname is localhost
-   */
-  private isLocalhost(hostname: string): boolean {
-    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
-  }
-
-  /**
-   * Check if IP address is in private range
-   */
-  private isPrivateIp(hostname: string): boolean {
-    // Remove port if present
-    const ip = hostname.split(':')[0];
-
-    // Check IPv4 private ranges
-    for (const pattern of this.BLOCKED_IP_PATTERNS) {
-      if (pattern.test(ip)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
   /**
    * Safely fetch from a URL with timeout and validation
    * @param url - URL to fetch from
@@ -131,7 +68,7 @@ export class ModelDiscoveryService {
    * @param provider - Provider configuration
    * @returns Array of available model names
    */
-  async discoverModels(provider: AIProvider): Promise<string[]> {
+  async discoverModels(provider: AIProvider & { decryptedApiKey?: string }): Promise<string[]> {
     try {
       switch (provider.type) {
         case 'openai':
@@ -160,14 +97,27 @@ export class ModelDiscoveryService {
 
   /**
    * Discover OpenAI models via their API
-   * @param provider - OpenAI provider configuration
+   * Requires decrypted API key - will not fall back to encrypted key
+   * @param provider - OpenAI provider configuration with decrypted key
    * @returns Array of available model names
+   * @throws BadRequestException if decrypted API key is not available
    */
-  private async discoverOpenAIModels(provider: AIProvider): Promise<string[]> {
+  private async discoverOpenAIModels(provider: AIProvider & { decryptedApiKey?: string }): Promise<string[]> {
     try {
-      const response = await this.safeFetch('https://api.openai.com/v1/models', {
-        'Authorization': `Bearer ${provider.apiKey}`,
-      });
+      // CRITICAL: Must use decrypted key, never fallback to encrypted key
+      const apiKey = provider.decryptedApiKey;
+
+      if (!apiKey && provider.type !== 'ollama') {
+        // OpenAI always requires an API key
+        throw new BadRequestException('API key is required but was not provided decrypted');
+      }
+
+      const headers: Record<string, string> = {};
+      if (apiKey) {
+        headers['Authorization'] = `Bearer ${apiKey}`;
+      }
+
+      const response = await this.safeFetch('https://api.openai.com/v1/models', headers);
 
       if (!response.ok) {
         throw new Error(`OpenAI API returned status ${response.status}`);
@@ -203,7 +153,7 @@ export class ModelDiscoveryService {
    * @param provider - Anthropic provider configuration
    * @returns Array of available model names
    */
-  private async discoverAnthropicModels(provider: AIProvider): Promise<string[]> {
+  private async discoverAnthropicModels(provider: AIProvider & { decryptedApiKey?: string }): Promise<string[]> {
     // Anthropic doesn't expose a public models list endpoint
     // Return the known Claude models
     return [
@@ -216,17 +166,28 @@ export class ModelDiscoveryService {
 
   /**
    * Discover Google Gemini models via OpenAI-compatible API
-   * @param provider - Gemini provider configuration
+   * Requires decrypted API key - will not fall back to encrypted key
+   * @param provider - Gemini provider configuration with decrypted key
    * @returns Array of available model names
+   * @throws BadRequestException if decrypted API key is not available
    */
-  private async discoverGeminiModels(provider: AIProvider): Promise<string[]> {
+  private async discoverGeminiModels(provider: AIProvider & { decryptedApiKey?: string }): Promise<string[]> {
     try {
       const baseUrl = provider.baseUrl || 'https://generativelanguage.googleapis.com/openai/';
       const url = `${baseUrl}v1/models`;
 
-      const response = await this.safeFetch(url, {
-        'Authorization': `Bearer ${provider.apiKey}`,
-      });
+      // CRITICAL: Must use decrypted key, never fallback to encrypted key
+      const apiKey = provider.decryptedApiKey;
+
+      if (!apiKey) {
+        // Gemini always requires an API key
+        throw new BadRequestException('API key is required but was not provided decrypted');
+      }
+
+      const headers: Record<string, string> = {};
+      headers['Authorization'] = `Bearer ${apiKey}`;
+
+      const response = await this.safeFetch(url, headers);
 
       if (!response.ok) {
         throw new Error(`Gemini API returned status ${response.status}`);
@@ -257,7 +218,7 @@ export class ModelDiscoveryService {
    * @param provider - Ollama provider configuration
    * @returns Array of available model names
    */
-  private async discoverOllamaModels(provider: AIProvider): Promise<string[]> {
+  private async discoverOllamaModels(provider: AIProvider & { decryptedApiKey?: string }): Promise<string[]> {
     try {
       const baseUrl = provider.baseUrl || 'http://localhost:11434';
       const url = `${baseUrl}/api/tags`;
@@ -289,17 +250,28 @@ export class ModelDiscoveryService {
 
   /**
    * Discover Together AI available models
-   * @param provider - Together AI provider configuration
+   * Requires decrypted API key - will not fall back to encrypted key
+   * @param provider - Together AI provider configuration with decrypted key
    * @returns Array of available model names
+   * @throws BadRequestException if decrypted API key is not available
    */
-  private async discoverTogetherModels(provider: AIProvider): Promise<string[]> {
+  private async discoverTogetherModels(provider: AIProvider & { decryptedApiKey?: string }): Promise<string[]> {
     try {
       const baseUrl = provider.baseUrl || 'https://api.together.xyz';
       const url = `${baseUrl}/v1/models`;
 
-      const response = await this.safeFetch(url, {
-        'Authorization': `Bearer ${provider.apiKey}`,
-      });
+      // CRITICAL: Must use decrypted key, never fallback to encrypted key
+      const apiKey = provider.decryptedApiKey;
+
+      if (!apiKey) {
+        // Together AI always requires an API key
+        throw new BadRequestException('API key is required but was not provided decrypted');
+      }
+
+      const headers: Record<string, string> = {};
+      headers['Authorization'] = `Bearer ${apiKey}`;
+
+      const response = await this.safeFetch(url, headers);
 
       if (!response.ok) {
         throw new Error(`Together API returned status ${response.status}`);
@@ -324,10 +296,12 @@ export class ModelDiscoveryService {
 
   /**
    * Discover models from any OpenAI-compatible API
-   * @param provider - OpenAI-compatible provider configuration
+   * Requires decrypted API key - will not fall back to encrypted key
+   * @param provider - OpenAI-compatible provider configuration with decrypted key
    * @returns Array of available model names
+   * @throws BadRequestException if decrypted API key is not available (unless keyless)
    */
-  private async discoverOpenAICompatibleModels(provider: AIProvider): Promise<string[]> {
+  private async discoverOpenAICompatibleModels(provider: AIProvider & { decryptedApiKey?: string }): Promise<string[]> {
     try {
       if (!provider.baseUrl) {
         throw new Error('Base URL is required for OpenAI-compatible providers');
@@ -335,9 +309,16 @@ export class ModelDiscoveryService {
 
       const url = `${provider.baseUrl}/models`;
 
-      const response = await this.safeFetch(url, {
-        'Authorization': `Bearer ${provider.apiKey}`,
-      });
+      // CRITICAL: Must use decrypted key, never fallback to encrypted key
+      const apiKey = provider.decryptedApiKey;
+
+      // OpenAI-compatible providers may support keyless auth (e.g., local deployments)
+      const headers: Record<string, string> = {};
+      if (apiKey) {
+        headers['Authorization'] = `Bearer ${apiKey}`;
+      }
+
+      const response = await this.safeFetch(url, headers);
 
       if (!response.ok) {
         throw new Error(`API returned status ${response.status}`);
