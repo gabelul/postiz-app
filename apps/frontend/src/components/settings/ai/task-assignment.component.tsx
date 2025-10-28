@@ -1,6 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
+import type {
+  ITaskAssignment,
+  IProviderResponse,
+  AITaskType,
+} from '@gitroom/nestjs-libraries/src/dtos/ai/ai-provider.types';
 
 /**
  * Component for assigning AI providers and models to different tasks
@@ -16,8 +21,8 @@ export function TaskAssignmentPanel({
   providers,
   onUpdate,
 }: {
-  tasks: any[];
-  providers: any[];
+  tasks: ITaskAssignment[];
+  providers: IProviderResponse[];
   onUpdate: () => void;
 }) {
   const [editingTask, setEditingTask] = useState<string | null>(null);
@@ -159,23 +164,22 @@ export function TaskAssignmentPanel({
   }
 
   /**
-   * Get models for a provider (this is a simple implementation)
-   * In a real app, you might fetch available models from the provider
+   * Get models for a provider
+   * Returns discovered models if available, falls back to defaults based on provider type
+   * @param providerId - Provider ID
+   * @returns Array of available model identifiers
    */
   function getModelsForProvider(providerId: string): string[] {
     const provider = providers.find((p) => p.id === providerId);
     if (!provider) return [];
 
-    // Parse available models if stored
-    if (provider.availableModels) {
-      try {
-        return JSON.parse(provider.availableModels);
-      } catch {
-        return [];
-      }
+    // availableModels is already parsed as an array by the backend
+    // No need to JSON.parse it - just use it directly if it exists
+    if (provider.availableModels && Array.isArray(provider.availableModels)) {
+      return provider.availableModels;
     }
 
-    // Return default models based on type
+    // Return default models based on provider type if discovery hasn't run yet
     const modelsByType: Record<string, string[]> = {
       openai: ['gpt-4.1', 'gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo', 'dall-e-3', 'dall-e-2'],
       anthropic: [
@@ -190,9 +194,10 @@ export function TaskAssignmentPanel({
         'meta-llama/Llama-3-70b-chat-hf',
         'mistralai/Mixtral-8x22B-Instruct',
       ],
+      'openai-compatible': [],
     };
 
-    return modelsByType[provider.type] || [];
+    return modelsByType[provider.type as keyof typeof modelsByType] || [];
   }
 
   return (
