@@ -6,7 +6,7 @@ import {
   useWallet,
   WalletProvider as WalletProviderWrapper,
 } from '@solana/wallet-adapter-react';
-import { useWalletMultiButton } from '@solana/wallet-adapter-base-ui';
+import { useWalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import {
   TorusWalletAdapter,

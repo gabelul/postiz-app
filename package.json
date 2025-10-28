@@ -55,6 +55,7 @@
     "@copilotkit/react-textarea": "1.10.6",
     "@copilotkit/react-ui": "1.10.6",
     "@copilotkit/runtime": "1.10.6",
+    "@copilotkit/runtime-client-gql": "1.10.6",
     "@hookform/resolvers": "^3.3.4",
     "@langchain/community": "^0.3.40",
     "@langchain/core": "^0.3.44",
