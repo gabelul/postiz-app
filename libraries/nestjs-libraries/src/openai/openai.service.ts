@@ -300,6 +300,7 @@ export class OpenaiService {
 
   /**
    * Generate slides with image prompts and voice text from text content
+   * Uses automatic provider selection with retry logic
    * @param text - Text content to convert to slides
    */
   async generateSlidesFromText(text: string) {
