@@ -35,6 +35,7 @@ export class ModelDiscoveryService {
 
   /**
    * Validate a URL to prevent SSRF attacks
+   * Checks protocol, hostname against allowlist and blocked IP ranges
    * @param url - URL to validate
    * @returns Validated URL
    * @throws BadRequestException if URL is invalid or blocked
@@ -55,6 +56,14 @@ export class ModelDiscoveryService {
       // Check hostname against private IP ranges
       if (this.isPrivateIp(url.hostname)) {
         throw new BadRequestException(`Access to private IP addresses is not allowed: ${url.hostname}`);
+      }
+
+      // For non-localhost URLs, verify against allowlist
+      if (!this.isLocalhost(url.hostname) && !this.ALLOWED_DOMAINS.includes(url.hostname)) {
+        this.logger.warn(`Attempted access to non-whitelisted domain: ${url.hostname}`);
+        throw new BadRequestException(
+          `Access to ${url.hostname} is not allowed. Only whitelisted domains are permitted.`
+        );
       }
 
       return url;
