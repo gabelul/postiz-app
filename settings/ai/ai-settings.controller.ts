@@ -8,12 +8,16 @@ import {
   Param,
   UseGuards,
   BadRequestException,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { Organization } from '@prisma/client';
 import { AISettingsService } from './ai-settings.service';
 import { ModelDiscoveryService } from './model-discovery.service';
 import { GetOrgFromRequest } from '@gitroom/nestjs-libraries/user/org.from.request';
 import { PoliciesGuard } from '@gitroom/backend/services/auth/permissions/permissions.guard';
+import { CreateProviderDto } from './dtos/create-provider.dto';
+import { UpdateTaskAssignmentDto } from './dtos/update-task-assignment.dto';
 
 /**
  * Controller for managing AI provider settings
@@ -54,27 +58,18 @@ export class AISettingsController {
   /**
    * Create a new AI provider
    * POST /api/settings/ai/providers
-   * Body: {
-   *   name: string,
-   *   type: 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'together' | 'openai-compatible',
-   *   apiKey: string,
-   *   baseUrl?: string,
-   *   customConfig?: string,
-   *   isDefault?: boolean
-   * }
+   * Validates all input data and creates a new provider configuration
+   *
+   * @param org - Organization from request context
+   * @param body - Provider configuration with validation
+   * @returns Created provider with masked API key
+   * @throws BadRequestException if organization is missing or data is invalid
    */
   @Post('providers')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   async createProvider(
     @GetOrgFromRequest() org: Organization,
-    @Body()
-    body: {
-      name: string;
-      type: string;
-      apiKey: string;
-      baseUrl?: string;
-      customConfig?: string;
-      isDefault?: boolean;
-    }
+    @Body() body: CreateProviderDto
   ) {
     this.validateOrganization(org);
     return this._aiSettingsService.createProvider(org.id, body);
@@ -183,24 +178,20 @@ export class AISettingsController {
   /**
    * Update a task assignment
    * PUT /api/settings/ai/tasks/:taskType
-   * Body: {
-   *   providerId: string,
-   *   model: string,
-   *   fallbackProviderId?: string,
-   *   fallbackModel?: string
-   * }
+   * Validates assignment configuration and updates the task-to-provider mapping
+   *
+   * @param org - Organization from request context
+   * @param taskType - The task type (image, text, video-slides, agent)
+   * @param body - Assignment configuration with validation
+   * @returns Updated task assignment
+   * @throws BadRequestException if organization is missing or data is invalid
    */
   @Put('tasks/:taskType')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   async updateTaskAssignment(
     @GetOrgFromRequest() org: Organization,
     @Param('taskType') taskType: string,
-    @Body()
-    body: {
-      providerId: string;
-      model: string;
-      fallbackProviderId?: string;
-      fallbackModel?: string;
-    }
+    @Body() body: UpdateTaskAssignmentDto
   ) {
     this.validateOrganization(org);
     return this._aiSettingsService.updateTaskAssignment(org.id, taskType, body);
