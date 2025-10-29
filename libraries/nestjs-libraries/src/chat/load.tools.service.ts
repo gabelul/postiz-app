@@ -87,10 +87,9 @@ export class LoadToolsService {
           const adapter = this._adapterFactory.createAdapter(provider);
           const openaiClient = adapter.getClient();
 
-          // Use the openai integration from ai-sdk with custom client
-          agentModel = openai(model, {
-            apiKey: process.env.OPENAI_API_KEY || 'sk-',
-          });
+          // Use the openai integration from ai-sdk
+          // Note: Custom provider configuration is handled by the adapter factory
+          agentModel = openai(model);
           break;
 
         default:

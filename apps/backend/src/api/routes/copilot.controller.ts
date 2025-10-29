@@ -14,6 +14,7 @@ import {
   copilotRuntimeNodeHttpEndpoint,
   copilotRuntimeNextJSAppRouterEndpoint,
 } from '@copilotkit/runtime';
+import OpenAI from 'openai';
 import { GetOrgFromRequest } from '@gitroom/nestjs-libraries/user/org.from.request';
 import { Organization } from '@prisma/client';
 import { SubscriptionService } from '@gitroom/nestjs-libraries/database/prisma/subscriptions/subscription.service';
@@ -87,12 +88,18 @@ export class CopilotController {
         : (process.env.SMART_LLM || 'gpt-4.1');
     }
 
+    // Create OpenAI client with dynamic configuration
+    const openaiClient = new OpenAI({
+      apiKey,
+      baseURL,
+    });
+
     const copilotRuntimeHandler = copilotRuntimeNodeHttpEndpoint({
       endpoint: '/copilot/chat',
       runtime: new CopilotRuntime(),
       serviceAdapter: new OpenAIAdapter({
-        apiKey,
-        baseURL,
+        // @ts-ignore - OpenAI type signature mismatch with CopilotKit runtime
+        openai: openaiClient,
         model,
       }),
     });

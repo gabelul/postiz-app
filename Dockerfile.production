@@ -80,9 +80,7 @@ COPY --from=builder --chown=postiz:postiz /app/apps/backend/dist ./apps/backend/
 COPY --from=builder --chown=postiz:postiz /app/apps/workers/dist ./apps/workers/dist
 COPY --from=builder --chown=postiz:postiz /app/apps/cron/dist ./apps/cron/dist
 
-# Copy Prisma schema
-COPY --from=builder --chown=postiz:postiz /app/node_modules/.prisma ./node_modules/.prisma
-
+# Note: .prisma will be generated during pnpm install for production
 # Install ONLY production dependencies (no dev deps)
 # This ensures smaller image size and no dev tools
 RUN pnpm install --no-frozen-lockfile --prod --no-optional

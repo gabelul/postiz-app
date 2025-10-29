@@ -188,6 +188,12 @@ Respond ONLY with valid JSON, no additional text.`;
     try {
       this.logger.debug(`Analyzing image with Claude model: ${model}`);
 
+      // Download image and convert to base64
+      const imageBuffer = await this.downloadImageAsBase64(imageUrl);
+
+      // Determine media type from URL or default to jpeg
+      const mediaType = this.getMediaType(imageUrl);
+
       const response = await this.client.messages.create({
         model,
         max_tokens: 1024,
@@ -198,8 +204,9 @@ Respond ONLY with valid JSON, no additional text.`;
               {
                 type: 'image',
                 source: {
-                  type: 'url',
-                  url: imageUrl,
+                  type: 'base64',
+                  media_type: mediaType,
+                  data: imageBuffer,
                 },
               },
               {
@@ -221,5 +228,42 @@ Respond ONLY with valid JSON, no additional text.`;
       this.logger.error(`Failed to analyze image with Claude: ${error}`);
       throw error;
     }
+  }
+
+  /**
+   * Download an image from URL and convert to base64
+   * @param imageUrl - URL of the image
+   * @returns Base64 encoded image string
+   */
+  private async downloadImageAsBase64(imageUrl: string): Promise<string> {
+    try {
+      const response = await fetch(imageUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to download image: ${response.statusText}`);
+      }
+      const buffer = await response.arrayBuffer();
+      return Buffer.from(buffer).toString('base64');
+    } catch (error) {
+      this.logger.error(`Failed to download image from ${imageUrl}: ${error}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Determine media type from image URL
+   * @param imageUrl - URL of the image
+   * @returns Media type (e.g., 'image/jpeg', 'image/png')
+   */
+  private getMediaType(
+    imageUrl: string
+  ): 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' {
+    const url = new URL(imageUrl);
+    const pathname = url.pathname.toLowerCase();
+
+    if (pathname.endsWith('.png')) return 'image/png';
+    if (pathname.endsWith('.gif')) return 'image/gif';
+    if (pathname.endsWith('.webp')) return 'image/webp';
+    // Default to jpeg
+    return 'image/jpeg';
   }
 }

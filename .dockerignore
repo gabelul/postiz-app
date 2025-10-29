@@ -4,6 +4,8 @@
 **/node_modules
 node_modules/*
 node_modules
+**/.prisma
+.prisma
 docker-data/*
 dist
 .nx
