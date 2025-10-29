@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import type {
   IProviderResponse,
   ITaskAssignment,
-} from '@gitroom/nestjs-libraries/src/dtos/ai/ai-provider.types';
+} from '@gitroom/nestjs-libraries/dtos/ai/ai-provider.types';
 import { AIProvidersList } from './ai-providers-list.component';
 import { AddProviderModal } from './add-provider-modal.component';
 import { TaskAssignmentPanel } from './task-assignment.component';

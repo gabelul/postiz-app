@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import type { IProviderResponse } from '@gitroom/nestjs-libraries/src/dtos/ai/ai-provider.types';
+import type { IProviderResponse } from '@gitroom/nestjs-libraries/dtos/ai/ai-provider.types';
 import { ProviderTestButton } from './provider-test-button.component';
 import { DiscoverModelsButton } from './discover-models-button.component';
 

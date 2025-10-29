@@ -146,7 +146,11 @@ export function AddProviderModal({
       }
 
       // Remove undefined values
-      Object.keys(payload).forEach((key) => payload[key] === undefined && delete payload[key]);
+      Object.keys(payload).forEach((key) => {
+        if (payload[key as keyof typeof payload] === undefined) {
+          delete payload[key as keyof typeof payload];
+        }
+      });
 
       const response = await fetch('/api/settings/ai/providers', {
         method: 'POST',

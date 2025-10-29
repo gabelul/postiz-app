@@ -5,7 +5,7 @@ import type {
   ITaskAssignment,
   IProviderResponse,
   AITaskType,
-} from '@gitroom/nestjs-libraries/src/dtos/ai/ai-provider.types';
+} from '@gitroom/nestjs-libraries/dtos/ai/ai-provider.types';
 
 /**
  * Form data for task assignment configuration
