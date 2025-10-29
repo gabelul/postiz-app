@@ -63,7 +63,8 @@ export class AIProviderDiscoveryService {
           this.loadProvider(providerName);
           discoveredProviders.push(providerName);
         } catch (error) {
-          this.logger.error(`Failed to load provider '${providerName}': ${error.message}`);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          this.logger.error(`Failed to load provider '${providerName}': ${errorMessage}`);
         }
       }
     }
