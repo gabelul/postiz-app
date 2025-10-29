@@ -34,7 +34,8 @@ export class AIProviderManagerService {
           this.clients.set(name, client);
           this.logger.log(`Initialized OpenAI client for provider '${name}'`);
         } catch (error) {
-          this.logger.error(`Failed to initialize client for provider '${name}': ${error.message}`);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          this.logger.error(`Failed to initialize client for provider '${name}': ${errorMessage}`);
           this.discoveryService.setProviderHealth(name, false);
         }
       }
@@ -289,7 +290,8 @@ export class AIProviderManagerService {
 
       } catch (error) {
         this.discoveryService.setProviderHealth(name, false);
-        this.logger.warn(`Health check failed for provider '${name}': ${error.message}`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        this.logger.warn(`Health check failed for provider '${name}': ${errorMessage}`);
       }
     }
   }

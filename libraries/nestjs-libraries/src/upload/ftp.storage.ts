@@ -62,6 +62,7 @@ export class FTPStorage implements IUploadProvider {
 
     try {
       // Configure connection timeout and keep-alive
+      // @ts-expect-error - timeout is read-only in type definitions but can be set at runtime
       client.ftp.timeout = 30000; // 30 seconds timeout
 
       await client.access({
@@ -74,6 +75,7 @@ export class FTPStorage implements IUploadProvider {
       });
 
       // Set passive mode
+      // @ts-expect-error - pasv is not in type definitions but exists at runtime
       client.ftp.pasv = this._passiveMode;
 
       return client;
