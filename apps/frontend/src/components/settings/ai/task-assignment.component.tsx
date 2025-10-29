@@ -232,7 +232,12 @@ export function TaskAssignmentPanel({
         {taskTypes.map((taskType) => {
           const task = tasks.find((t) => t.taskType === taskType.type);
           const isEditing = editingTask === taskType.type;
-          const data = formData[taskType.type] || {};
+          const data: TaskFormData = formData[taskType.type] || {
+            providerId: '',
+            model: '',
+            fallbackProviderId: '',
+            fallbackModel: '',
+          };
 
           return (
             <div

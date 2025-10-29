@@ -4,7 +4,8 @@
       "mcp__fetch-server__fetch",
       "Bash(bash test-build.sh:*)",
       "Bash(tee:*)",
-      "Read(//private/tmp/postiz-public/**)"
+      "Read(//private/tmp/postiz-public/**)",
+      "Bash(docker build:*)"
     ],
     "deny": [],
     "ask": []
