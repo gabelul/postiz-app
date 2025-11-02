@@ -25,6 +25,8 @@ import { MessagesRepository } from '@gitroom/nestjs-libraries/database/prisma/ma
 import { StripeService } from '@gitroom/nestjs-libraries/services/stripe.service';
 import { ExtractContentService } from '@gitroom/nestjs-libraries/openai/extract.content.service';
 import { OpenaiService } from '@gitroom/nestjs-libraries/openai/openai.service';
+import { AIProviderManagerService } from '@gitroom/nestjs-libraries/openai/ai-provider-manager.service';
+import { AIProviderDiscoveryService } from '@gitroom/nestjs-libraries/openai/ai-provider-discovery.service';
 import { AgenciesService } from '@gitroom/nestjs-libraries/database/prisma/agencies/agencies.service';
 import { AgenciesRepository } from '@gitroom/nestjs-libraries/database/prisma/agencies/agencies.repository';
 import { TrackService } from '@gitroom/nestjs-libraries/track/track.service';
@@ -80,6 +82,8 @@ import { FalService } from '@gitroom/nestjs-libraries/openai/fal.service';
     ItemUserService,
     MessagesService,
     IntegrationManager,
+    AIProviderDiscoveryService,
+    AIProviderManagerService,
     ExtractContentService,
     OpenaiService,
     FalService,

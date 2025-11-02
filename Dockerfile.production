@@ -49,9 +49,10 @@ ARG NEXT_PUBLIC_VERSION
 ENV NEXT_PUBLIC_VERSION=$NEXT_PUBLIC_VERSION
 ENV NODE_ENV=production
 
-# Install runtime dependencies (curl for health checks, dumb-init for signal handling)
+# Install runtime dependencies (curl for health checks)
 # Note: Nginx is handled by Centminmod reverse proxy on your server
-RUN apk add --no-cache bash curl dumb-init
+# Note: Alpine includes tini as PID 1 init, so we don't need dumb-init
+RUN apk add --no-cache bash curl
 
 # Create application user (non-root for security)
 RUN adduser -D -g 'postiz' postiz || true
@@ -80,17 +81,20 @@ COPY --from=builder --chown=postiz:postiz /app/apps/backend/dist ./apps/backend/
 COPY --from=builder --chown=postiz:postiz /app/apps/workers/dist ./apps/workers/dist
 COPY --from=builder --chown=postiz:postiz /app/apps/cron/dist ./apps/cron/dist
 
-# Note: .prisma will be generated during pnpm install for production
-# Install ONLY production dependencies (no dev deps)
-# This ensures smaller image size and no dev tools
-RUN pnpm install --no-frozen-lockfile --prod --no-optional
+# Copy .env file (will be overridden by docker-compose environment variables at runtime)
+COPY --from=builder --chown=postiz:postiz /app/.env ./
+
+# Note: .prisma will be generated during pnpm install
+# Install all dependencies (including dev and optional)
+# Dev dependencies like jsdom are needed at runtime even though they're marked as dev
+RUN pnpm install --no-frozen-lockfile
 
 # Create uploads directory
 RUN mkdir -p /uploads && chown -R postiz:postiz /uploads
 
-# Health check for the backend service (running on port 3000 internally)
+# Health check for the backend service (respecting PORT, defaults to 5000 in compose)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD curl -f http://localhost:3000/health || exit 1
+  CMD curl -f http://localhost:${PORT:-5000}/ || exit 1
 
 # Switch to non-root user for security
 USER postiz
@@ -99,10 +103,9 @@ USER postiz
 # Backend runs on 3000, Frontend on 4200 (internal to container)
 # Centminmod reverse proxy connects to Docker network
 
-# Use dumb-init to handle signals properly and prevent zombie processes
-ENTRYPOINT ["/usr/sbin/dumb-init", "--"]
-
-# Start the application services via PM2
-# Note: Nginx is handled separately by Centminmod on your server
-# This container only runs the backend, frontend, workers, and cron services
-CMD ["sh", "-c", "pm2-runtime start ecosystem.config.js || pnpm run start:prod:backend"]
+# Start both backend and frontend services simultaneously
+# Backend runs on internal port 5000 (exposed as ${BACKEND_PORT})
+# Frontend runs on internal port 4200 (exposed as ${FRONTEND_PORT})
+# Note: Nginx reverse proxy is handled separately by Centminmod on your server
+# Uses sh -c with proper process management to keep both services running
+CMD ["sh", "-c", "pnpm run start:prod:backend & pnpm run start:prod:frontend & wait"]
