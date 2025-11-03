@@ -23,12 +23,10 @@ import { ThirdPartyService } from '@gitroom/nestjs-libraries/database/prisma/thi
 @Injectable()
 export class ThirdPartyManager implements OnModuleInit {
   /**
-   * ThirdPartyService instance is lazily resolved via ModuleRef in onModuleInit().
-   * Using 'any' type to prevent NestJS reflection from scanning this as a constructor dependency.
-   * The actual type is ThirdPartyService, but TypeScript type annotations cause NestJS
-   * to include them in the reflection metadata, which fails compile-time DI validation.
+   * Lazily resolved ThirdPartyService instance. Resolved during the onModuleInit hook to avoid
+   * compile-time DI validation while still providing type safety within this class.
    */
-  private _thirdPartyService: any;
+  private _thirdPartyService: ThirdPartyService | null = null;
 
   constructor(private _moduleRef: ModuleRef) {}
 
@@ -37,9 +35,21 @@ export class ThirdPartyManager implements OnModuleInit {
    * This allows ModuleRef.get() to successfully find ThirdPartyService from DatabaseModule.
    */
   onModuleInit() {
-    this._thirdPartyService = this._moduleRef.get('ThirdPartyService', {
+    this._thirdPartyService = this._moduleRef.get<ThirdPartyService>(ThirdPartyService, {
       strict: false,
     });
+
+    if (!this._thirdPartyService) {
+      throw new Error('ThirdPartyService could not be resolved by ThirdPartyManager');
+    }
+  }
+
+  private get thirdPartyService(): ThirdPartyService {
+    if (!this._thirdPartyService) {
+      throw new Error('ThirdPartyService requested before ThirdPartyManager initialization completed');
+    }
+
+    return this._thirdPartyService;
   }
 
   getAllThirdParties(): any[] {
@@ -64,15 +74,15 @@ export class ThirdPartyManager implements OnModuleInit {
   }
 
   deleteIntegration(org: string, id: string) {
-    return this._thirdPartyService.deleteIntegration(org, id);
+    return this.thirdPartyService.deleteIntegration(org, id);
   }
 
   getIntegrationById(org: string, id: string) {
-    return this._thirdPartyService.getIntegrationById(org, id);
+    return this.thirdPartyService.getIntegrationById(org, id);
   }
 
   getAllThirdPartiesByOrganization(org: string) {
-    return this._thirdPartyService.getAllThirdPartiesByOrganization(org);
+    return this.thirdPartyService.getAllThirdPartiesByOrganization(org);
   }
 
   saveIntegration(
@@ -81,7 +91,7 @@ export class ThirdPartyManager implements OnModuleInit {
     apiKey: string,
     data: { name: string; username: string; id: string }
   ) {
-    return this._thirdPartyService.saveIntegration(
+    return this.thirdPartyService.saveIntegration(
       org,
       identifier,
       apiKey,

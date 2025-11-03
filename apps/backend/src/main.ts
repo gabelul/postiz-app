@@ -15,6 +15,7 @@ import { SubscriptionExceptionFilter } from '@gitroom/backend/services/auth/perm
 import { HttpExceptionFilter } from '@gitroom/nestjs-libraries/services/exception.filter';
 import { ConfigurationChecker } from '@gitroom/helpers/configuration/configuration.checker';
 import { startMcp } from '@gitroom/nestjs-libraries/chat/start.mcp';
+import { BillingBypassInterceptor } from '@gitroom/nestjs-libraries/interceptors/billing-bypass.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -44,6 +45,9 @@ async function bootstrap() {
       transform: true,
     })
   );
+
+  // Register global interceptors for billing bypass for superAdmins
+  app.useGlobalInterceptors(new BillingBypassInterceptor());
 
   app.use('/copilot/*', (req: any, res: any, next: any) => {
     json({ limit: '50mb' })(req, res, next);

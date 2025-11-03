@@ -1,0 +1,383 @@
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Put,
+  UseGuards,
+  Query,
+} from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { User } from '@prisma/client';
+import { AdminGuard } from '@gitroom/nestjs-libraries/guards/admin.guard';
+import { GetUserFromRequest } from '@gitroom/nestjs-libraries/user/user.from.request';
+import { GetOrgFromRequest } from '@gitroom/nestjs-libraries/user/org.from.request';
+import { Organization } from '@prisma/client';
+import { PrismaService } from '@gitroom/nestjs-libraries/database/prisma/prisma.service';
+import type { $Enums } from '@prisma/client';
+
+/**
+ * Admin Users Controller
+ *
+ * Manages user administration including:
+ * - Listing all users
+ * - Promoting/demoting users to/from superAdmin
+ * - Setting custom quotas for users
+ *
+ * All endpoints require superAdmin privileges (protected by AdminGuard)
+ * @see AdminGuard
+ */
+@ApiTags('Admin - Users')
+@Controller('/api/admin/users')
+@UseGuards(AdminGuard)
+export class AdminUsersController {
+  /**
+   * Constructor
+   * @param _prismaService - Prisma database service
+   */
+  constructor(private readonly _prismaService: PrismaService) {}
+
+  /**
+   * List all users in the system with pagination
+   *
+   * @param take - Number of records to return (default: 50, max: 500)
+   * @param skip - Number of records to skip (default: 0)
+   * @param search - Optional search by email or name
+   * @returns Paginated list of users with basic info
+   *
+   * @example
+   * GET /api/admin/users?take=20&skip=0&search=john
+   */
+  @Get('/')
+  @ApiOperation({
+    summary: 'List all users with pagination',
+    description: 'Returns paginated list of all users in system',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of users',
+    schema: {
+      type: 'object',
+      properties: {
+        users: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              email: { type: 'string' },
+              name: { type: 'string' },
+              isSuperAdmin: { type: 'boolean' },
+              createdAt: { type: 'string' },
+              organizations: { type: 'array' },
+            },
+          },
+        },
+        total: { type: 'number' },
+        skip: { type: 'number' },
+        take: { type: 'number' },
+      },
+    },
+  })
+  async listUsers(
+    @Query('take') take: string = '50',
+    @Query('skip') skip: string = '0',
+    @Query('search') search?: string
+  ) {
+    // Validate and parse pagination parameters
+    const takeNum = Math.min(parseInt(take) || 50, 500);
+    const skipNum = Math.max(parseInt(skip) || 0, 0);
+
+    // Build search filter - Use any to work around Prisma typing issues with QueryMode
+    const whereClause: any = search
+      ? {
+          OR: [
+            { email: { contains: search, mode: 'insensitive' } },
+            { name: { contains: search, mode: 'insensitive' } },
+          ],
+        }
+      : {};
+
+    // Fetch users and total count
+    const [users, total] = await Promise.all([
+      this._prismaService.user.findMany({
+        where: whereClause,
+        skip: skipNum,
+        take: takeNum,
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          isSuperAdmin: true,
+          createdAt: true,
+          organizations: {
+            select: {
+              id: true,
+              organization: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this._prismaService.user.count({ where: whereClause }),
+    ]);
+
+    return {
+      users,
+      total,
+      skip: skipNum,
+      take: takeNum,
+    };
+  }
+
+  /**
+   * Get detailed information about a specific user
+   *
+   * @param userId - The ID of the user
+   * @returns User details including organizations and quotas
+   */
+  @Get('/:userId')
+  @ApiOperation({
+    summary: 'Get user details',
+    description: 'Retrieve detailed information about a specific user',
+  })
+  async getUser(@Param('userId') userId: string) {
+    // Fetch user with all related data
+    const user = await this._prismaService.user.findUnique({
+      where: { id: userId },
+      include: {
+        organizations: {
+          include: {
+            organization: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new Error(`User with ID ${userId} not found`);
+    }
+
+    return user;
+  }
+
+  /**
+   * Promote a user to superAdmin status
+   *
+   * Grants full administrative access to the system.
+   * User will be able to access all admin endpoints and manage other users.
+   *
+   * @param userId - The ID of the user to promote
+   * @returns Updated user object
+   */
+  @Post('/:userId/promote')
+  @ApiOperation({
+    summary: 'Promote user to superAdmin',
+    description: 'Grant superAdmin privileges to a user',
+  })
+  async promoteToAdmin(@Param('userId') userId: string) {
+    // Prevent self-demotion check - but allow admin to promote themselves first time
+    const user = await this._prismaService.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new Error(`User with ID ${userId} not found`);
+    }
+
+    // Update user to superAdmin
+    const updatedUser = await this._prismaService.user.update({
+      where: { id: userId },
+      data: { isSuperAdmin: true },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        isSuperAdmin: true,
+        createdAt: true,
+      },
+    });
+
+    return {
+      success: true,
+      message: `User ${user.email} promoted to superAdmin`,
+      user: updatedUser,
+    };
+  }
+
+  /**
+   * Demote a user from superAdmin status
+   *
+   * Removes administrative access. User becomes regular user.
+   * Cannot demote the only superAdmin in the system.
+   *
+   * @param userId - The ID of the user to demote
+   * @returns Updated user object
+   */
+  @Post('/:userId/demote')
+  @ApiOperation({
+    summary: 'Demote user from superAdmin',
+    description: 'Remove superAdmin privileges from a user',
+  })
+  async demoteFromAdmin(
+    @Param('userId') userId: string,
+    @GetUserFromRequest() requestUser: User
+  ) {
+    // Fetch user to check current status
+    const user = await this._prismaService.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new Error(`User with ID ${userId} not found`);
+    }
+
+    // Count remaining superAdmins
+    const superAdminCount = await this._prismaService.user.count({
+      where: { isSuperAdmin: true },
+    });
+
+    // Prevent demoting the only superAdmin
+    if (user.isSuperAdmin && superAdminCount <= 1) {
+      throw new Error(
+        'Cannot demote the only superAdmin in the system. Promote another user first.'
+      );
+    }
+
+    // Update user to regular user
+    const updatedUser = await this._prismaService.user.update({
+      where: { id: userId },
+      data: { isSuperAdmin: false },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        isSuperAdmin: true,
+        createdAt: true,
+      },
+    });
+
+    return {
+      success: true,
+      message: `User ${user.email} demoted from superAdmin`,
+      user: updatedUser,
+    };
+  }
+
+  /**
+   * Set custom quotas for a user
+   *
+   * Allows admin to override system-wide quotas for specific users.
+   * Quotas are stored as JSON for flexibility.
+   *
+   * @param userId - The ID of the user
+   * @param body - Custom quotas object (e.g., { posts_per_month: 1000, channels: 10 })
+   * @returns Updated user object
+   *
+   * @example
+   * POST /api/admin/users/:userId/quotas
+   * {
+   *   "posts_per_month": 1000,
+   *   "image_generation_count": 100,
+   *   "channels": 20
+   * }
+   */
+  @Put('/:userId/quotas')
+  @ApiOperation({
+    summary: 'Set custom user quotas',
+    description: 'Override system quotas for a specific user',
+  })
+  async setUserQuotas(
+    @Param('userId') userId: string,
+    @Body() body: Record<string, any>
+  ) {
+    // Fetch user to verify existence
+    const user = await this._prismaService.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new Error(`User with ID ${userId} not found`);
+    }
+
+    // Validate quotas object
+    if (!body || typeof body !== 'object') {
+      throw new Error('Quotas must be a valid object');
+    }
+
+    // Update user with custom quotas
+    const updatedUser = await this._prismaService.user.update({
+      where: { id: userId },
+      data: {
+        customQuotas: JSON.stringify(body),
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        customQuotas: true,
+        createdAt: true,
+      },
+    });
+
+    return {
+      success: true,
+      message: `Custom quotas set for user ${user.email}`,
+      user: {
+        ...updatedUser,
+        customQuotas: JSON.parse(updatedUser.customQuotas || '{}'),
+      },
+    };
+  }
+
+  /**
+   * Remove custom quotas for a user
+   *
+   * Resets user to system-wide quotas.
+   *
+   * @param userId - The ID of the user
+   * @returns Updated user object
+   */
+  @Post('/:userId/quotas/reset')
+  @ApiOperation({
+    summary: 'Reset user quotas to system defaults',
+    description: 'Remove custom quotas and revert to system-wide quotas',
+  })
+  async resetUserQuotas(@Param('userId') userId: string) {
+    // Fetch user to verify existence
+    const user = await this._prismaService.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new Error(`User with ID ${userId} not found`);
+    }
+
+    // Reset quotas to null
+    const updatedUser = await this._prismaService.user.update({
+      where: { id: userId },
+      data: {
+        customQuotas: null,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        customQuotas: true,
+        createdAt: true,
+      },
+    });
+
+    return {
+      success: true,
+      message: `Quotas reset for user ${user.email}. Now using system defaults.`,
+      user: updatedUser,
+    };
+  }
+}

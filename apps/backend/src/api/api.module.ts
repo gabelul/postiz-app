@@ -34,6 +34,10 @@ import { AutopostController } from '@gitroom/backend/api/routes/autopost.control
 import { SetsController } from '@gitroom/backend/api/routes/sets.controller';
 import { ThirdPartyController } from '@gitroom/backend/api/routes/third-party.controller';
 import { MonitorController } from '@gitroom/backend/api/routes/monitor.controller';
+import { AdminUsersController } from '@gitroom/backend/api/routes/admin/users.controller';
+import { AdminOrganizationsController } from '@gitroom/backend/api/routes/admin/organizations.controller';
+// TODO: AdminSettingsController - Temporarily disabled due to missing systemSettings table in schema
+// import { AdminSettingsController } from '@gitroom/backend/api/routes/admin/settings.controller';
 
 const authenticatedController = [
   UsersController,
@@ -62,6 +66,11 @@ const authenticatedController = [
     AuthController,
     PublicController,
     MonitorController,
+    // Admin Controllers - Require superAdmin privileges
+    AdminUsersController,
+    AdminOrganizationsController,
+    // TODO: AdminSettingsController - Disabled due to missing systemSettings table
+    // AdminSettingsController,
     ...authenticatedController,
   ],
   providers: [

@@ -7,9 +7,9 @@ services:
     container_name: postiz-postgres
     restart: always
     environment:
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_PASSWORD: postiz-local-pwd
+      POSTGRES_USER: postiz-local
+      POSTGRES_DB: postiz-db-local
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./backups:/backups
@@ -31,6 +31,8 @@ services:
     image: redis:7-alpine
     container_name: postiz-redis
     restart: always
+    environment:
+      REDIS_PASSWORD: postiz-redis-pwd
     command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
     volumes:
       - redis-data:/data
@@ -65,18 +67,30 @@ services:
         condition: service_healthy
     environment:
       # === Database Configuration ===
-      DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@postiz-postgres:5432/${DB_NAME}"
+      DB_USER: "postiz-local"
+      DB_PASSWORD: "postiz-local-pwd"
+      DB_NAME: "postiz-db-local"
+      DATABASE_URL: "postgresql://postiz-local:postiz-local-pwd@postiz-postgres:5432/postiz-db-local"
 
       # === Redis Configuration ===
-      REDIS_URL: "redis://:${REDIS_PASSWORD}@postiz-redis:6379"
+      REDIS_URL: "redis://:postiz-redis-pwd@postiz-redis:6379"
+      REDIS_PASSWORD: "postiz-redis-pwd"
 
       # === Application Configuration ===
       NODE_ENV: "production"
       PORT: "5000"
 
       # === NextJS Configuration (Frontend) ===
-      NEXT_PUBLIC_API_URL: "https://${DOMAIN}/api"
-      NEXT_PUBLIC_BACKEND_URL: "https://${DOMAIN}"
+      # For local testing: defaults to http://localhost:4200
+      # For production: Set these environment variables to your domain
+      # Example: NEXT_PUBLIC_API_URL="https://your-domain.com/api"
+      NEXT_PUBLIC_API_URL: "${NEXT_PUBLIC_API_URL:-http://localhost:32456/api}"
+      NEXT_PUBLIC_BACKEND_URL: "${NEXT_PUBLIC_BACKEND_URL:-http://localhost:32456}"
+
+      # === CORS Configuration ===
+      # Required for frontend to communicate with backend API
+      # Must match the frontend URL in browser (including protocol and port)
+      FRONTEND_URL: "${FRONTEND_URL:-http://localhost:4200}"
 
       # === Security Configuration ===
       JWT_SECRET: ${JWT_SECRET}
@@ -111,12 +125,17 @@ services:
 
       # === Performance Configuration (Optional) ===
       MAX_WORKERS: ${MAX_WORKERS:-4}
+      STORAGE_PROVIDER: "local"
+      UPLOAD_DIRECTORY: "/uploads"
+      DISABLE_MASTRA: ${DISABLE_MASTRA:-false}
 
-    # Expose backend on a random high port for Centminmod to reverse proxy to
-    # Use a non-standard port (32456) to avoid conflicts
-    # Centminmod Nginx will proxy requests to postiz-app:32456
+    # Expose on configurable ports
+    # Local testing defaults: Backend 32456, Frontend 4200
+    # Production: Set BACKEND_PORT and FRONTEND_PORT env vars for different ports
+    # Example: BACKEND_PORT=9000 FRONTEND_PORT=3000 docker-compose up -d
     ports:
-      - "32456:3000"
+      - "${BACKEND_PORT:-32456}:5000"    # Backend port (env var or default 32456)
+      - "${FRONTEND_PORT:-4200}:4200"    # Frontend port (env var or default 4200)
 
     volumes:
       # Persistent uploads directory
@@ -129,7 +148,7 @@ services:
 
     # Health check for the application
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
       interval: 30s
       timeout: 10s
       retries: 3

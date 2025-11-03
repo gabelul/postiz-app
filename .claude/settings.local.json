@@ -5,7 +5,15 @@
       "Bash(bash test-build.sh:*)",
       "Bash(tee:*)",
       "Read(//private/tmp/postiz-public/**)",
-      "Bash(docker build:*)"
+      "Bash(docker build:*)",
+      "Bash(docker-compose:*)",
+      "Bash(docker exec:*)",
+      "Bash(xargs cat:*)",
+      "Bash(curl:*)",
+      "Bash(ls:*)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm run prisma-generate:*)"
     ],
     "deny": [],
     "ask": []

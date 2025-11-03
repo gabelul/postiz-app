@@ -7,6 +7,7 @@ import {
   Post,
   Delete,
 } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { ApiTags } from '@nestjs/swagger';
 import { ThirdPartyManager } from '@gitroom/nestjs-libraries/3rdparties/thirdparty.manager';
 import { GetOrgFromRequest } from '@gitroom/nestjs-libraries/user/org.from.request';
@@ -20,26 +21,39 @@ import { MediaService } from '@gitroom/nestjs-libraries/database/prisma/media/me
 export class ThirdPartyController {
   private storage = UploadFactory.createStorage();
 
+  private _thirdPartyManager: ThirdPartyManager | null = null;
+
   constructor(
-    private _thirdPartyManager: ThirdPartyManager,
+    private _moduleRef: ModuleRef,
     private _mediaService: MediaService,
   ) {}
 
+  /**
+   * Lazy getter for ThirdPartyManager - delays resolution until first access
+   * This prevents NestJS DI errors at module initialization time
+   */
+  private getThirdPartyManager(): ThirdPartyManager {
+    if (!this._thirdPartyManager) {
+      this._thirdPartyManager = this._moduleRef.get(ThirdPartyManager, { strict: false });
+    }
+    return this._thirdPartyManager;
+  }
+
   @Get('/list')
   async getThirdPartyList() {
-    return this._thirdPartyManager.getAllThirdParties();
+    return this.getThirdPartyManager().getAllThirdParties();
   }
 
   @Get('/')
   async getSavedThirdParty(@GetOrgFromRequest() organization: Organization) {
     return Promise.all(
       (
-        await this._thirdPartyManager.getAllThirdPartiesByOrganization(
+        await this.getThirdPartyManager().getAllThirdPartiesByOrganization(
           organization.id
         )
       ).map((thirdParty) => {
         const { description, fields, position, title, identifier } =
-          this._thirdPartyManager.getThirdPartyByName(thirdParty.identifier);
+          this.getThirdPartyManager().getThirdPartyByName(thirdParty.identifier);
         return {
           ...thirdParty,
           title,
@@ -56,7 +70,7 @@ export class ThirdPartyController {
     @GetOrgFromRequest() organization: Organization,
     @Param('id') id: string
   ) {
-    return this._thirdPartyManager.deleteIntegration(organization.id, id);
+    return this.getThirdPartyManager().deleteIntegration(organization.id, id);
   }
 
   @Post('/:id/submit')
@@ -65,7 +79,7 @@ export class ThirdPartyController {
     @Param('id') id: string,
     @Body() data: any
   ) {
-    const thirdParty = await this._thirdPartyManager.getIntegrationById(
+    const thirdParty = await this.getThirdPartyManager().getIntegrationById(
       organization.id,
       id
     );
@@ -74,7 +88,7 @@ export class ThirdPartyController {
       throw new HttpException('Integration not found', 404);
     }
 
-    const thirdPartyInstance = this._thirdPartyManager.getThirdPartyByName(
+    const thirdPartyInstance = this.getThirdPartyManager().getThirdPartyByName(
       thirdParty.identifier
     );
 
@@ -98,7 +112,7 @@ export class ThirdPartyController {
     @Param('functionName') functionName: string,
     @Body() data: any
   ) {
-    const thirdParty = await this._thirdPartyManager.getIntegrationById(
+    const thirdParty = await this.getThirdPartyManager().getIntegrationById(
       organization.id,
       id
     );
@@ -107,7 +121,7 @@ export class ThirdPartyController {
       throw new HttpException('Integration not found', 404);
     }
 
-    const thirdPartyInstance = this._thirdPartyManager.getThirdPartyByName(
+    const thirdPartyInstance = this.getThirdPartyManager().getThirdPartyByName(
       thirdParty.identifier
     );
 
@@ -127,7 +141,7 @@ export class ThirdPartyController {
     @Param('identifier') identifier: string,
     @Body('api') api: string
   ) {
-    const thirdParty = this._thirdPartyManager.getThirdPartyByName(identifier);
+    const thirdParty = this.getThirdPartyManager().getThirdPartyByName(identifier);
     if (!thirdParty) {
       throw new HttpException('Invalid identifier', 400);
     }
@@ -138,7 +152,7 @@ export class ThirdPartyController {
     }
 
     try {
-      const save = await this._thirdPartyManager.saveIntegration(
+      const save = await this.getThirdPartyManager().saveIntegration(
         organization.id,
         identifier,
         api,
