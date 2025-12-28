@@ -1,3 +1,14 @@
+# ============================================================================
+# SECURITY WARNING:
+# This docker-compose file contains default passwords for local development.
+# NEVER deploy these defaults to production!
+#
+# Always override passwords via environment variables:
+#   export POSTGRES_PASSWORD="your-secure-password-here"
+#   export REDIS_PASSWORD="your-secure-password-here"
+#   docker-compose up -d
+# ============================================================================
+
 version: '3.8'
 
 services:
@@ -7,7 +18,8 @@ services:
     container_name: postiz-postgres
     restart: always
     environment:
-      POSTGRES_PASSWORD: postiz-local-pwd
+      # WARNING: Change default password in production!
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postiz-local-pwd}
       POSTGRES_USER: postiz-local
       POSTGRES_DB: postiz-db-local
     volumes:
@@ -32,8 +44,9 @@ services:
     container_name: postiz-redis
     restart: always
     environment:
-      REDIS_PASSWORD: postiz-redis-pwd
-    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
+      # WARNING: Change default password in production!
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-postiz-redis-pwd}
+      command: redis-server --requirepass ${REDIS_PASSWORD:-postiz-redis-pwd} --appendonly yes
     volumes:
       - redis-data:/data
     networks:
@@ -67,14 +80,16 @@ services:
         condition: service_healthy
     environment:
       # === Database Configuration ===
+      # WARNING: Change default password in production!
       DB_USER: "postiz-local"
-      DB_PASSWORD: "postiz-local-pwd"
+      DB_PASSWORD: ${DB_PASSWORD:-postiz-local-pwd}
       DB_NAME: "postiz-db-local"
-      DATABASE_URL: "postgresql://postiz-local:postiz-local-pwd@postiz-postgres:5432/postiz-db-local"
+      DATABASE_URL: "postgresql://postiz-local:${DB_PASSWORD:-postiz-local-pwd}@postiz-postgres:5432/postiz-db-local"
 
       # === Redis Configuration ===
-      REDIS_URL: "redis://:postiz-redis-pwd@postiz-redis:6379"
-      REDIS_PASSWORD: "postiz-redis-pwd"
+      # WARNING: Change default password in production!
+      REDIS_URL: "redis://:${REDIS_PASSWORD:-postiz-redis-pwd}@postiz-redis:6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-postiz-redis-pwd}
 
       # === Application Configuration ===
       NODE_ENV: "production"

@@ -14,10 +14,11 @@ export class ModelDiscoveryService {
   private readonly FETCH_TIMEOUT_MS = 10000;
 
   /**
-   * Validate a URL to prevent malformed requests
-   * @param url - URL to validate
+   * Validate a URL to prevent SSRF attacks
+   * Blocks internal/private network access and invalid protocols
+   * @param urlString - URL to validate
    * @returns Validated URL
-   * @throws BadRequestException if URL is invalid or unsupported
+   * @throws BadRequestException if URL is invalid or blocked
    */
   private validateUrl(urlString: string): URL {
     try {
@@ -28,6 +29,36 @@ export class ModelDiscoveryService {
         throw new BadRequestException(`Invalid protocol: ${url.protocol}. Only HTTPS and HTTP are allowed.`);
       }
 
+      // SSRF Protection: Block internal/private network access
+      const hostname = url.hostname.toLowerCase();
+
+      // Block localhost variations
+      const localhostPatterns = ['localhost', '127.0.0.1', '[::1]', '0.0.0.0', '0localhost'];
+      if (localhostPatterns.some((pattern) => hostname === pattern || hostname.startsWith(pattern + '.'))) {
+        throw new BadRequestException('Access to localhost is not allowed');
+      }
+
+      // Block private IP ranges (IPv4)
+      if (this.isPrivateIP(hostname)) {
+        throw new BadRequestException('Access to private IP addresses is not allowed');
+      }
+
+      // Block internal TLDs
+      if (hostname.endsWith('.local') || hostname.endsWith('.internal')) {
+        throw new BadRequestException('Access to internal domains is not allowed');
+      }
+
+      // Block cloud metadata endpoints (critical for SSRF prevention)
+      const blockedEndpoints = [
+        '169.254.169.254', // AWS/Azure/GCP metadata
+        'metadata.google.internal', // GCP
+        '100.100.100.200', // Alibaba Cloud
+        'metadata.server', // DigitalOcean
+      ];
+      if (blockedEndpoints.some((endpoint) => hostname === endpoint || hostname.endsWith(endpoint))) {
+        throw new BadRequestException('Access to cloud metadata endpoints is not allowed');
+      }
+
       return url;
     } catch (error) {
       if (error instanceof BadRequestException) {
@@ -35,6 +66,35 @@ export class ModelDiscoveryService {
       }
       throw new BadRequestException(`Invalid URL: ${urlString}`);
     }
+  }
+
+  /**
+   * Check if a hostname is a private IP address
+   * @param hostname - Hostname to check
+   * @returns true if hostname is a private IP
+   */
+  private isPrivateIP(hostname: string): boolean {
+    // IPv4 private ranges: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.0/8
+    const ipv4Pattern = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+    const match = hostname.match(ipv4Pattern);
+
+    if (match) {
+      const [, first, second] = match.map(Number);
+
+      // 10.0.0.0/8
+      if (first === 10) return true;
+
+      // 172.16.0.0/12 (172.16-31)
+      if (first === 172 && second >= 16 && second <= 31) return true;
+
+      // 192.168.0.0/16
+      if (first === 192 && second === 168) return true;
+
+      // 127.0.0.0/8 (loopback - already handled but double-check)
+      if (first === 127) return true;
+    }
+
+    return false;
   }
   /**
    * Safely fetch from a URL with timeout and validation
@@ -89,7 +149,7 @@ export class ModelDiscoveryService {
       }
     } catch (error) {
       this.logger.warn(
-        `Failed to discover models for provider ${provider.name}: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to discover models for provider ${provider.id}: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
       return [];
     }

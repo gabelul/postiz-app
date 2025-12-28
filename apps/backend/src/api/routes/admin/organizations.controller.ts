@@ -16,6 +16,7 @@ import { Organization } from '@prisma/client';
 import { PrismaService } from '@gitroom/nestjs-libraries/database/prisma/prisma.service';
 import type { $Enums } from '@prisma/client';
 import { safeJsonParse } from '@gitroom/nestjs-libraries/utils';
+import { PaginationWithSearchDto } from './dto';
 
 /**
  * Admin Organizations Controller
@@ -55,21 +56,23 @@ export class AdminOrganizationsController {
     summary: 'List all organizations',
     description: 'Returns paginated list of all organizations in system',
   })
-  async listOrganizations(
-    @Query('take') take: string = '50',
-    @Query('skip') skip: string = '0',
-    @Query('search') search?: string
-  ) {
+  async listOrganizations(@Query() query: PaginationWithSearchDto) {
     // Validate and parse pagination parameters
-    const takeNum = Math.min(parseInt(take) || 50, 500);
-    const skipNum = Math.max(parseInt(skip) || 0, 0);
+    const takeNum = Math.min(parseInt(query.take) || 50, 500);
+    const skipNum = Math.max(parseInt(query.skip) || 0, 0);
 
-    // Build search filter - Use any to work around Prisma typing issues with QueryMode
-    const whereClause: any = search
-      ? {
-          name: { contains: search, mode: 'insensitive' },
-        }
-      : {};
+    // Sanitize search input to prevent injection
+    const sanitizedSearch = query.search
+      ? query.search.trim().slice(0, 100).replace(/[<>\"'%;()&+]/g, '')
+      : '';
+
+    // Build search filter with proper typing
+    const whereClause =
+      sanitizedSearch.length > 0
+        ? {
+            name: { contains: sanitizedSearch, mode: 'insensitive' as const },
+          }
+        : {};
 
     // Fetch organizations and total count
     const [organizations, total] = await Promise.all([
@@ -195,7 +198,7 @@ export class AdminOrganizationsController {
     });
 
     if (!organization) {
-      throw new NotFoundException(`Organization with ID ${orgId} not found`);
+      throw new NotFoundException('Organization not found');
     }
 
     return {
@@ -241,7 +244,7 @@ export class AdminOrganizationsController {
     });
 
     if (!org) {
-      throw new NotFoundException(`Organization with ID ${orgId} not found`);
+      throw new NotFoundException('Organization not found');
     }
 
     // Get or create subscription
@@ -271,7 +274,7 @@ export class AdminOrganizationsController {
 
     return {
       success: true,
-      message: `Organization ${org.name} subscription tier set to ${body.tier}`,
+      message: 'Subscription tier updated',
       subscription,
     };
   }
@@ -305,7 +308,7 @@ export class AdminOrganizationsController {
     });
 
     if (!org) {
-      throw new NotFoundException(`Organization with ID ${orgId} not found`);
+      throw new NotFoundException('Organization not found');
     }
 
     // Update bypass billing flag
@@ -323,7 +326,7 @@ export class AdminOrganizationsController {
 
     return {
       success: true,
-      message: `Billing bypass ${body.bypass ? 'enabled' : 'disabled'} for ${org.name}`,
+      message: `Billing bypass ${body.bypass ? 'enabled' : 'disabled'}`,
       organization: updated,
     };
   }
@@ -363,7 +366,7 @@ export class AdminOrganizationsController {
     });
 
     if (!org) {
-      throw new NotFoundException(`Organization with ID ${orgId} not found`);
+      throw new NotFoundException('Organization not found');
     }
 
     // Validate limits object
@@ -386,7 +389,7 @@ export class AdminOrganizationsController {
 
     return {
       success: true,
-      message: `Custom limits set for organization ${org.name}`,
+      message: 'Custom limits set for organization',
       organization: {
         ...updated,
         customLimits: safeJsonParse(updated.customLimits, {}),
@@ -414,7 +417,7 @@ export class AdminOrganizationsController {
     });
 
     if (!org) {
-      throw new NotFoundException(`Organization with ID ${orgId} not found`);
+      throw new NotFoundException('Organization not found');
     }
 
     // Reset limits to null
@@ -432,7 +435,7 @@ export class AdminOrganizationsController {
 
     return {
       success: true,
-      message: `Limits reset for organization ${org.name}. Now using system defaults.`,
+      message: 'Organization limits reset to system defaults',
       organization: updated,
     };
   }
@@ -458,7 +461,7 @@ export class AdminOrganizationsController {
     });
 
     if (!org) {
-      throw new NotFoundException(`Organization with ID ${orgId} not found`);
+      throw new NotFoundException('Organization not found');
     }
 
     // Set unlimited limits and bypass billing
@@ -485,7 +488,7 @@ export class AdminOrganizationsController {
 
     return {
       success: true,
-      message: `Organization ${org.name} made unlimited`,
+      message: 'Organization made unlimited',
       organization: {
         ...updated,
         customLimits: safeJsonParse(updated.customLimits, {}),

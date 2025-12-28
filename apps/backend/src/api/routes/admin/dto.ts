@@ -6,7 +6,28 @@ import {
   IsIn,
   Min,
   IsNotEmpty,
+  Max,
 } from 'class-validator';
+
+/**
+ * DTO for pagination with optional search
+ * Used for list endpoints that support searching and pagination
+ */
+export class PaginationWithSearchDto {
+  @IsOptional()
+  @IsString()
+  @Min(0)
+  take?: string;
+
+  @IsOptional()
+  @IsString()
+  @Min(0)
+  skip?: string;
+
+  @IsOptional()
+  @IsString()
+  search?: string;
+}
 
 /**
  * DTO for setting bypass billing

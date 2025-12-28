@@ -67,7 +67,7 @@ export class AIProvidersService {
     });
 
     if (!provider) {
-      throw new NotFoundException(`AI provider with ID ${providerId} not found`);
+      throw new NotFoundException('AI provider not found');
     }
 
     return this.maskApiKey(provider);
@@ -92,7 +92,7 @@ export class AIProvidersService {
     });
 
     if (!provider) {
-      throw new NotFoundException(`AI provider with ID ${providerId} not found`);
+      throw new NotFoundException('AI provider not found');
     }
 
     // Decrypt API key for internal use with error handling
@@ -343,7 +343,7 @@ export class AIProvidersService {
       });
 
       if (!provider) {
-        throw new NotFoundException(`AI provider with ID ${providerId} not found`);
+        throw new NotFoundException('AI provider not found');
       }
 
       // Unset isDefault for all providers of the same type within the transaction
@@ -369,13 +369,25 @@ export class AIProvidersService {
 
   /**
    * Mask API key for client responses
+   * Shows format: sk_***abcd (last 4 chars visible for verification)
    * @param provider - Provider with full API key
    * @returns Provider with masked API key
    */
   private maskApiKey(provider: AIProvider): AIProvider {
+    if (!provider.apiKey || provider.apiKey.length === 0) {
+      return {
+        ...provider,
+        apiKey: '',
+      };
+    }
+
+    // Show format: sk_***abcd (last 4 chars visible)
+    const lastFour = provider.apiKey.slice(-4);
+    const prefix = provider.apiKey.startsWith('sk-') ? 'sk-' : provider.apiKey.startsWith('sk_') ? 'sk_' : '';
+
     return {
       ...provider,
-      apiKey: provider.apiKey ? '***REDACTED***' : '',
+      apiKey: `${prefix}***${lastFour}`,
     };
   }
 }

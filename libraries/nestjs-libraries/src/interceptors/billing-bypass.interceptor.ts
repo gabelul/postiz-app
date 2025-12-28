@@ -6,7 +6,7 @@ import {
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
-import { Observable, throwError } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
 /**
@@ -60,16 +60,22 @@ export class BillingBypassInterceptor implements NestInterceptor {
 
           // Handle Payment Required (402) - tier limit reached
           if (status === HttpStatus.PAYMENT_REQUIRED) {
-            // For superAdmins, bypass the billing check and return success
-            // The actual content doesn't matter, the endpoint will have already
-            // processed the request in the guard
-            return throwError(error); // Still throw but with a note it's bypassed
+            // For superAdmins with bypass enabled, return success instead of error
+            return of({
+              success: true,
+              bypassed: true,
+              message: 'Billing requirement bypassed by admin',
+            });
           }
 
           // Handle Not Acceptable (406) - trial exhausted
           if (status === 406) {
             // Similar bypass for trial exhausted
-            return throwError(error);
+            return of({
+              success: true,
+              bypassed: true,
+              message: 'Trial limit bypassed by admin',
+            });
           }
         }
 

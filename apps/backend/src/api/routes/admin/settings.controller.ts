@@ -131,7 +131,7 @@ export class AdminSettingsController {
 
     return {
       success: true,
-      message: `Setting ${body.key} saved`,
+      message: 'Setting saved',
       setting,
     };
   }
@@ -154,7 +154,7 @@ export class AdminSettingsController {
     });
 
     if (!setting) {
-      throw new NotFoundException(`Setting with key ${key} not found`);
+      throw new NotFoundException('Setting not found');
     }
 
     const updated = await this._prismaService.systemSettings.update({
@@ -168,7 +168,7 @@ export class AdminSettingsController {
 
     return {
       success: true,
-      message: `Setting ${key} updated`,
+      message: 'Setting updated',
       setting: updated,
     };
   }
@@ -186,7 +186,7 @@ export class AdminSettingsController {
     });
 
     if (!setting) {
-      throw new NotFoundException(`Setting with key ${key} not found`);
+      throw new NotFoundException('Setting not found');
     }
 
     await this._prismaService.systemSettings.delete({
@@ -195,7 +195,7 @@ export class AdminSettingsController {
 
     return {
       success: true,
-      message: `Setting ${key} deleted`,
+      message: 'Setting deleted',
     };
   }
 

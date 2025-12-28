@@ -722,6 +722,7 @@ model AIProvider {
   @@index([organizationId])
   @@index([type])
   @@index([deletedAt])
+  @@index([organizationId, type, deletedAt])
 }
 
 /**

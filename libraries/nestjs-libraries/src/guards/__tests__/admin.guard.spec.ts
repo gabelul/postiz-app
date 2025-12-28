@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { Test } from '@nestjs/testing';
-import { ExecutionContext } from '@nestjs/common';
+import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { AdminGuard } from '../admin.guard';
 
 /**
@@ -9,8 +9,9 @@ import { AdminGuard } from '../admin.guard';
  * The AdminGuard protects admin routes by ensuring only superAdmins can access them.
  * This test verifies:
  * - Superadmins are allowed to proceed
- * - Regular users are forbidden
- * - Missing user context returns forbidden
+ * - Regular users are forbidden (throws ForbiddenException)
+ * - Missing user context is forbidden (throws ForbiddenException)
+ * - Users with isSuperAdmin=null are forbidden (throws ForbiddenException)
  */
 describe('AdminGuard', () => {
   let guard: AdminGuard;
@@ -46,7 +47,7 @@ describe('AdminGuard', () => {
 
   /**
    * Test: Regular user cannot access protected routes
-   * Verifies that a user with isSuperAdmin=false is forbidden
+   * Verifies that a user with isSuperAdmin=false causes a ForbiddenException
    */
   it('should forbid regular users from accessing protected routes', () => {
     const mockExecutionContext = {
@@ -61,13 +62,13 @@ describe('AdminGuard', () => {
       }),
     } as unknown as ExecutionContext;
 
-    const result = guard.canActivate(mockExecutionContext);
-    expect(result).toBe(false);
+    expect(() => guard.canActivate(mockExecutionContext)).toThrow(ForbiddenException);
+    expect(() => guard.canActivate(mockExecutionContext)).toThrow('Admin access required');
   });
 
   /**
    * Test: Missing user context returns forbidden
-   * Verifies that requests without a user object are forbidden
+   * Verifies that requests without a user object cause a ForbiddenException
    */
   it('should forbid requests without user context', () => {
     const mockExecutionContext = {
@@ -78,8 +79,8 @@ describe('AdminGuard', () => {
       }),
     } as unknown as ExecutionContext;
 
-    const result = guard.canActivate(mockExecutionContext);
-    expect(result).toBe(false);
+    expect(() => guard.canActivate(mockExecutionContext)).toThrow(ForbiddenException);
+    expect(() => guard.canActivate(mockExecutionContext)).toThrow('User not found');
   });
 
   /**
@@ -99,7 +100,6 @@ describe('AdminGuard', () => {
       }),
     } as unknown as ExecutionContext;
 
-    const result = guard.canActivate(mockExecutionContext);
-    expect(result).toBe(false);
+    expect(() => guard.canActivate(mockExecutionContext)).toThrow(ForbiddenException);
   });
 });

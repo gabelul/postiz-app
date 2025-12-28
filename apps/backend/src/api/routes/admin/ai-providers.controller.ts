@@ -149,7 +149,7 @@ export class AdminAIProvidersController {
     await this._aiProvidersService.deleteProvider(org.id, id);
     return {
       success: true,
-      message: `AI provider ${id} deleted`,
+      message: 'AI provider deleted',
     };
   }
 
@@ -213,7 +213,7 @@ export class AdminAIProvidersController {
     );
     return {
       success: true,
-      message: `Provider ${provider.name} set as default for type ${provider.type}`,
+      message: 'Provider set as default',
       provider,
     };
   }

@@ -18,6 +18,7 @@ import { GetUserFromRequest } from '@gitroom/nestjs-libraries/user/user.from.req
 import { GetOrgFromRequest } from '@gitroom/nestjs-libraries/user/org.from.request';
 import { Organization } from '@prisma/client';
 import { PrismaService } from '@gitroom/nestjs-libraries/database/prisma/prisma.service';
+import { Throttle } from '@nestjs/throttler';
 import type { $Enums } from '@prisma/client';
 import { safeJsonParse } from '@gitroom/nestjs-libraries/utils';
 
@@ -187,7 +188,7 @@ export class AdminUsersController {
     });
 
     if (!user) {
-      throw new NotFoundException(`User with ID ${userId} not found`);
+      throw new NotFoundException('User not found');
     }
 
     return {
@@ -210,6 +211,7 @@ export class AdminUsersController {
     summary: 'Promote user to superAdmin',
     description: 'Grant superAdmin privileges to a user',
   })
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   async promoteToAdmin(
     @Param('userId') userId: string,
     @GetUserFromRequest() requestUser: User
@@ -219,32 +221,40 @@ export class AdminUsersController {
       throw new ForbiddenException('Cannot promote yourself to superAdmin');
     }
 
-    const user = await this._prismaService.user.findUnique({
-      where: { id: userId },
+    // Use transaction to prevent race condition
+    return this._prismaService.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      // Check if already admin
+      if (user.isSuperAdmin) {
+        throw new BadRequestException('User is already a superAdmin');
+      }
+
+      // Update user to superAdmin
+      const updatedUser = await tx.user.update({
+        where: { id: userId },
+        data: { isSuperAdmin: true },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          isSuperAdmin: true,
+          createdAt: true,
+        },
+      });
+
+      return {
+        success: true,
+        message: `User promoted to superAdmin`,
+        user: updatedUser,
+      };
     });
-
-    if (!user) {
-      throw new NotFoundException(`User with ID ${userId} not found`);
-    }
-
-    // Update user to superAdmin
-    const updatedUser = await this._prismaService.user.update({
-      where: { id: userId },
-      data: { isSuperAdmin: true },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        isSuperAdmin: true,
-        createdAt: true,
-      },
-    });
-
-    return {
-      success: true,
-      message: `User ${user.email} promoted to superAdmin`,
-      user: updatedUser,
-    };
   }
 
   /**
@@ -261,6 +271,7 @@ export class AdminUsersController {
     summary: 'Demote user from superAdmin',
     description: 'Remove superAdmin privileges from a user',
   })
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   async demoteFromAdmin(
     @Param('userId') userId: string,
     @GetUserFromRequest() requestUser: User
@@ -278,7 +289,7 @@ export class AdminUsersController {
       });
 
       if (!user) {
-        throw new NotFoundException(`User with ID ${userId} not found`);
+        throw new NotFoundException('User not found');
       }
 
       // Count remaining superAdmins
@@ -308,7 +319,7 @@ export class AdminUsersController {
 
       return {
         success: true,
-        message: `User ${user.email} demoted from superAdmin`,
+        message: 'User demoted from superAdmin',
         user: updatedUser,
       };
     });
@@ -347,7 +358,7 @@ export class AdminUsersController {
     });
 
     if (!user) {
-      throw new NotFoundException(`User with ID ${userId} not found`);
+      throw new NotFoundException('User not found');
     }
 
     // Validate quotas object
@@ -372,7 +383,7 @@ export class AdminUsersController {
 
     return {
       success: true,
-      message: `Custom quotas set for user ${user.email}`,
+      message: 'Custom quotas set for user',
       user: {
         ...updatedUser,
         customQuotas: safeJsonParse(updatedUser.customQuotas, {}),
@@ -400,7 +411,7 @@ export class AdminUsersController {
     });
 
     if (!user) {
-      throw new NotFoundException(`User with ID ${userId} not found`);
+      throw new NotFoundException('User not found');
     }
 
     // Reset quotas to null
