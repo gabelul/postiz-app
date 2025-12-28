@@ -31,7 +31,8 @@ export interface BulkUserOperationRequest {
 export interface BulkOrganizationOperationRequest {
   organizationIds: string[];
   operation: 'set_tier' | 'set_limits' | 'reset_limits' | 'toggle_billing';
-  tier?: 'FREE' | 'STARTER' | 'PRO' | 'ENTERPRISE';
+  // Tier values match Prisma SubscriptionTier enum (FREE is special case with no subscription)
+  tier?: 'FREE' | 'STANDARD' | 'PRO' | 'TEAM' | 'ULTIMATE';
   limits?: Record<string, unknown>;
   bypassBilling?: boolean;
 }
@@ -131,6 +132,7 @@ export class BulkOperationsService {
           entityType: AuditEntityType.USER,
           entityId: userId,
           adminId,
+          adminEmail: admin.email,
         });
       } catch (error) {
         result.failed++;
@@ -219,6 +221,7 @@ export class BulkOperationsService {
           entityType: AuditEntityType.USER,
           entityId: userId,
           adminId,
+          adminEmail: admin.email,
         });
       } catch (error) {
         result.failed++;
@@ -246,7 +249,7 @@ export class BulkOperationsService {
    */
   async bulkSetOrganizationTier(
     organizationIds: string[],
-    tier: 'FREE' | 'STARTER' | 'PRO' | 'ENTERPRISE',
+    tier: 'FREE' | 'STANDARD' | 'PRO' | 'TEAM' | 'ULTIMATE',
     adminId: string
   ): Promise<BulkOperationResult> {
     const result: BulkOperationResult = {
@@ -257,6 +260,16 @@ export class BulkOperationsService {
       errors: [],
     };
 
+    // Fetch admin email for audit log
+    const admin = await this._prismaService.user.findUnique({
+      where: { id: adminId },
+      select: { id: true, email: true },
+    });
+
+    if (!admin) {
+      throw new Error('Admin user not found');
+    }
+
     for (const orgId of organizationIds) {
       try {
         await this._prismaService.$transaction(async (tx) => {
@@ -266,10 +279,40 @@ export class BulkOperationsService {
             throw new Error('Organization not found');
           }
 
-          await tx.organization.update({
-            where: { id: orgId },
-            data: { subscriptionTier: tier },
-          });
+          // FREE tier means no subscription - delete if exists
+          if (tier === 'FREE') {
+            const existingSubscription = await tx.subscription.findUnique({
+              where: { organizationId: orgId },
+            });
+            if (existingSubscription) {
+              await tx.subscription.delete({
+                where: { organizationId: orgId },
+              });
+            }
+          } else {
+            // Find or create subscription for this organization
+            let subscription = await tx.subscription.findUnique({
+              where: { organizationId: orgId },
+            });
+
+            if (subscription) {
+              // Update existing subscription's tier
+              await tx.subscription.update({
+                where: { organizationId: orgId },
+                data: { subscriptionTier: tier },
+              });
+            } else {
+              // Create new subscription with the specified tier
+              await tx.subscription.create({
+                data: {
+                  organizationId: orgId,
+                  subscriptionTier: tier,
+                  period: 'MONTHLY',
+                  totalChannels: 0,
+                },
+              });
+            }
+          }
         });
 
         result.succeeded++;
@@ -279,7 +322,8 @@ export class BulkOperationsService {
           entityType: AuditEntityType.ORGANIZATION,
           entityId: orgId,
           adminId,
-          changes: JSON.stringify({ subscriptionTier: { before: '-', after: tier } }),
+          adminEmail: admin.email,
+          changes: { subscriptionTier: { before: '-', after: tier } },
         });
       } catch (error) {
         result.failed++;
@@ -318,6 +362,16 @@ export class BulkOperationsService {
       errors: [],
     };
 
+    // Fetch admin email for audit log
+    const admin = await this._prismaService.user.findUnique({
+      where: { id: adminId },
+      select: { id: true, email: true },
+    });
+
+    if (!admin) {
+      throw new Error('Admin user not found');
+    }
+
     for (const orgId of organizationIds) {
       try {
         await this._prismaService.$transaction(async (tx) => {
@@ -340,7 +394,8 @@ export class BulkOperationsService {
           entityType: AuditEntityType.ORGANIZATION,
           entityId: orgId,
           adminId,
-          changes: JSON.stringify({ customLimits: limits }),
+          adminEmail: admin.email,
+          changes: { customLimits: { before: '-', after: limits } },
         });
       } catch (error) {
         result.failed++;
@@ -419,6 +474,16 @@ export class BulkOperationsService {
       errors: [],
     };
 
+    // Fetch admin email for audit log
+    const admin = await this._prismaService.user.findUnique({
+      where: { id: adminId },
+      select: { id: true, email: true },
+    });
+
+    if (!admin) {
+      throw new Error('Admin user not found');
+    }
+
     try {
       const { headers, rows } = await this.parseCsvImport(content, 'users');
       result.totalRows = rows.length;
@@ -442,13 +507,13 @@ export class BulkOperationsService {
             throw new Error('Email is required');
           }
 
-          // Check if user exists
-          const existingUser = await this._prismaService.user.findUnique({
+          // Check if user exists (findFirst since email alone is not unique)
+          const existingUser = await this._prismaService.user.findFirst({
             where: { email },
           });
 
           if (existingUser) {
-            // Update existing user
+            // Update existing user by ID
             const updateData: any = {};
 
             if (row.name !== undefined) {
@@ -467,17 +532,19 @@ export class BulkOperationsService {
 
             if (Object.keys(updateData).length > 0) {
               await this._prismaService.user.update({
-                where: { email },
+                where: { id: existingUser.id },
                 data: updateData,
               });
             }
 
             result.imported++;
           } else {
-            // Create new user (without password - will need to set/reset)
+            // Create new user with required fields (without password - will need to set/reset)
             await this._prismaService.user.create({
               data: {
                 email,
+                providerName: 'LOCAL',
+                timezone: 0,
                 name: row.name || null,
                 isSuperAdmin: row.isSuperAdmin === 'true' || row.isSuperAdmin === '1',
                 customQuotas: row.customQuotas ? row.customQuotas : null,
@@ -501,11 +568,12 @@ export class BulkOperationsService {
         entityType: AuditEntityType.USER,
         entityId: 'bulk-import',
         adminId,
-        changes: JSON.stringify({
-          type: 'CSV_IMPORT_USERS',
-          imported: result.imported,
-          failed: result.failed,
-        }),
+        adminEmail: admin.email,
+        changes: {
+          type: { before: '-', after: 'CSV_IMPORT_USERS' },
+          imported: { before: 0, after: result.imported },
+          failed: { before: 0, after: result.failed },
+        },
       });
     } catch (error) {
       result.errors.push({

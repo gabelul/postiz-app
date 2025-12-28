@@ -35,7 +35,8 @@ export interface BulkUserOperationRequest {
 export interface BulkOrganizationOperationRequest {
   organizationIds: string[];
   operation: 'set_tier' | 'set_limits' | 'reset_limits' | 'toggle_billing';
-  tier?: 'FREE' | 'STARTER' | 'PRO' | 'ENTERPRISE';
+  // Tier values match Prisma SubscriptionTier enum (FREE is special case with no subscription)
+  tier?: 'FREE' | 'STANDARD' | 'PRO' | 'TEAM' | 'ULTIMATE';
   limits?: Record<string, unknown>;
   bypassBilling?: boolean;
 }

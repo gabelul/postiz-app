@@ -209,20 +209,19 @@ export class AdminSettingsController {
    * Get current tier definitions
    *
    * Returns what features are included in each subscription tier.
-   * These match the values in pricing.ts but are stored here for easy customization.
+   * Default tier definitions are merged with any custom overrides stored in database.
    *
-   * @returns Current tier definitions
+   * @returns Current tier definitions with applied overrides
    */
   @Get('/tiers')
   @ApiOperation({
     summary: 'Get tier definitions',
-    description: 'Retrieve current subscription tier features and limits',
+    description: 'Retrieve current subscription tier features and limits with database overrides merged',
   })
   @Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 requests per minute
   async getTiers() {
-    // For now, return hardcoded tiers from pricing.ts
-    // In a full implementation, these would be stored in database
-    const tiers = {
+    // Default tier definitions (from pricing.ts)
+    const defaultTiers = {
       FREE: {
         current: 'FREE',
         month_price: 0,
@@ -299,6 +298,31 @@ export class AdminSettingsController {
         generate_videos: 999,
       },
     };
+
+    // Fetch custom tier overrides from database
+    const tierSettings = await this._prismaService.systemSettings.findMany({
+      where: {
+        key: {
+          startsWith: 'tier.',
+        },
+      },
+    });
+
+    // Merge database overrides with defaults
+    const tiers = { ...defaultTiers };
+    for (const setting of tierSettings) {
+      // Extract tier name from key (e.g., "tier.free" -> "FREE")
+      const tierName = setting.key.split('.')[1]?.toUpperCase();
+      if (tierName && tiers[tierName as keyof typeof tiers]) {
+        const override = safeJsonParse(setting.value, {});
+        // Deep merge: override values take precedence
+        tiers[tierName as keyof typeof tiers] = {
+          ...tiers[tierName as keyof typeof tiers],
+          ...override,
+          current: tierName, // Ensure current property matches the key
+        };
+      }
+    }
 
     return tiers;
   }

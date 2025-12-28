@@ -247,20 +247,20 @@ export class AdminAuditService {
     const [totalLogs, logsByAction, logsByEntityType, topAdmins] = await Promise.all([
       this._prismaService.adminAuditLog.count(),
       // Get count by action
-      this._prismaService.adminAuditLog.groupBy({
+      (this._prismaService.adminAuditLog.groupBy as any)({
         by: ['action'],
         _count: true,
         orderBy: { _count: { _all: 'desc' } },
         take: 20,
       }),
       // Get count by entity type
-      this._prismaService.adminAuditLog.groupBy({
+      (this._prismaService.adminAuditLog.groupBy as any)({
         by: ['entityType'],
         _count: true,
         orderBy: { _count: { _all: 'desc' } },
       }),
       // Get top admins
-      this._prismaService.adminAuditLog.groupBy({
+      (this._prismaService.adminAuditLog.groupBy as any)({
         by: ['adminEmail', 'adminId'],
         _count: true,
         orderBy: { _count: { _all: 'desc' } },

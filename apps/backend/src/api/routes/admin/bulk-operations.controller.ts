@@ -192,6 +192,11 @@ export class BulkOperationsController {
       throw new BadRequestException('tier must be provided');
     }
 
+    const validTiers = ['FREE', 'STANDARD', 'PRO', 'TEAM', 'ULTIMATE'];
+    if (!validTiers.includes(body.tier)) {
+      throw new BadRequestException(`Invalid tier. Must be one of: ${validTiers.join(', ')}`);
+    }
+
     if (body.organizationIds.length > 100) {
       throw new BadRequestException('Maximum 100 organizations per operation');
     }

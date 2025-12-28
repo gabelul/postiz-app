@@ -232,7 +232,7 @@ export class AdminDashboardService {
    * Get subscription counts grouped by tier
    */
   private async getSubscriptionsByTier(): Promise<Array<{ subscriptionTier: string; _count: number }>> {
-    return this._prismaService.subscription.groupBy({
+    return (this._prismaService.subscription.groupBy as any)({
       by: ['subscriptionTier'],
       _count: true,
     });

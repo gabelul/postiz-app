@@ -47,12 +47,14 @@ interface OperationState {
 
 /**
  * Tier options for organizations
+ * Matches Prisma SubscriptionTier enum (FREE is special case with no subscription)
  */
 const TIER_OPTIONS = [
   { value: 'FREE', label: 'Free', color: 'bg-gray-100 text-gray-800' },
-  { value: 'STARTER', label: 'Starter', color: 'bg-blue-100 text-blue-800' },
+  { value: 'STANDARD', label: 'Standard', color: 'bg-blue-100 text-blue-800' },
   { value: 'PRO', label: 'Pro', color: 'bg-purple-100 text-purple-800' },
-  { value: 'ENTERPRISE', label: 'Enterprise', color: 'bg-green-100 text-green-800' },
+  { value: 'TEAM', label: 'Team', color: 'bg-indigo-100 text-indigo-800' },
+  { value: 'ULTIMATE', label: 'Ultimate', color: 'bg-green-100 text-green-800' },
 ] as const;
 
 export default function BulkOperationsPage() {
@@ -63,7 +65,7 @@ export default function BulkOperationsPage() {
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const [selectedOrgIds, setSelectedOrgIds] = useState<Set<string>>(new Set());
   const [csvContent, setCsvContent] = useState<string>('');
-  const [selectedTier, setSelectedTier] = useState<'FREE' | 'STARTER' | 'PRO' | 'ENTERPRISE'>('FREE');
+  const [selectedTier, setSelectedTier] = useState<'FREE' | 'STANDARD' | 'PRO' | 'TEAM' | 'ULTIMATE'>('FREE');
   const [limitsForm, setLimitsForm] = useState<Record<string, unknown>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
