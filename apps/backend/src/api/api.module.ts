@@ -40,10 +40,12 @@ import { AdminSettingsController } from '@gitroom/backend/api/routes/admin/setti
 import { AdminAIProvidersController } from '@gitroom/backend/api/routes/admin/ai-providers.controller';
 import { AdminDashboardController } from '@gitroom/backend/api/routes/admin/dashboard.controller';
 import { AdminEmailSettingsController } from '@gitroom/backend/api/routes/admin/email-settings.controller';
+import { BulkOperationsController } from '@gitroom/backend/api/routes/admin/bulk-operations.controller';
 import { AIProvidersService } from '@gitroom/backend/services/ai/ai-providers.service';
 import { AdminDashboardService } from '@gitroom/backend/services/admin/admin-dashboard.service';
 import { EncryptedSettingsService } from '@gitroom/backend/services/admin/encrypted-settings.service';
 import { AdminEmailService } from '@gitroom/backend/services/admin/admin-email.service';
+import { BulkOperationsService } from '@gitroom/backend/services/admin/bulk-operations.service';
 
 const authenticatedController = [
   UsersController,
@@ -79,6 +81,7 @@ const authenticatedController = [
     AdminAIProvidersController,
     AdminDashboardController,
     AdminEmailSettingsController,
+    BulkOperationsController,
     ...authenticatedController,
   ],
   providers: [
@@ -98,6 +101,7 @@ const authenticatedController = [
     AdminDashboardService,
     EncryptedSettingsService,
     AdminEmailService,
+    BulkOperationsService,
   ],
   get exports() {
     return [...this.imports, ...this.providers];
@@ -114,7 +118,8 @@ export class ApiModule implements NestModule {
       AdminSettingsController,
       AdminAIProvidersController,
       AdminDashboardController,
-      AdminEmailSettingsController
+      AdminEmailSettingsController,
+      BulkOperationsController
     );
   }
 }
