@@ -431,7 +431,7 @@ export class AdminUsersController {
 
     return {
       success: true,
-      message: `Quotas reset for user ${user.email}. Now using system defaults.`,
+      message: 'User quotas reset to system defaults',
       user: updatedUser,
     };
   }
