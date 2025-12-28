@@ -21,6 +21,7 @@ import { PrismaService } from '@gitroom/nestjs-libraries/database/prisma/prisma.
 import { Throttle } from '@nestjs/throttler';
 import type { $Enums } from '@prisma/client';
 import { safeJsonParse } from '@gitroom/nestjs-libraries/utils';
+import { AdminEmailService } from '@gitroom/backend/services/admin/admin-email.service';
 
 /**
  * Admin Users Controller
@@ -40,8 +41,12 @@ export class AdminUsersController {
   /**
    * Constructor
    * @param _prismaService - Prisma database service
+   * @param _emailService - Admin email notification service
    */
-  constructor(private readonly _prismaService: PrismaService) {}
+  constructor(
+    private readonly _prismaService: PrismaService,
+    private readonly _emailService: AdminEmailService
+  ) {}
 
   /**
    * List all users in the system with pagination
@@ -251,6 +256,18 @@ export class AdminUsersController {
         },
       });
 
+      // Send notification (fire-and-forget, don't block response)
+      this._emailService.notifyUserPromoted({
+        entityType: 'USER',
+        entityId: updatedUser.id,
+        entityName: updatedUser.email,
+        action: 'USER_PROMOTE',
+        adminEmail: requestUser.email,
+      }).catch((err) => {
+        // Log but don't fail the request
+        console.error('Failed to send promotion email:', err);
+      });
+
       return {
         success: true,
         message: `User promoted to superAdmin`,
@@ -317,6 +334,18 @@ export class AdminUsersController {
           isSuperAdmin: true,
           createdAt: true,
         },
+      });
+
+      // Send notification (fire-and-forget, don't block response)
+      this._emailService.notifyUserDemoted({
+        entityType: 'USER',
+        entityId: updatedUser.id,
+        entityName: updatedUser.email,
+        action: 'USER_DEMOTE',
+        adminEmail: requestUser.email,
+      }).catch((err) => {
+        // Log but don't fail the request
+        console.error('Failed to send demotion email:', err);
       });
 
       return {

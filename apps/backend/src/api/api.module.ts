@@ -43,6 +43,7 @@ import { AdminEmailSettingsController } from '@gitroom/backend/api/routes/admin/
 import { AIProvidersService } from '@gitroom/backend/services/ai/ai-providers.service';
 import { AdminDashboardService } from '@gitroom/backend/services/admin/admin-dashboard.service';
 import { EncryptedSettingsService } from '@gitroom/backend/services/admin/encrypted-settings.service';
+import { AdminEmailService } from '@gitroom/backend/services/admin/admin-email.service';
 
 const authenticatedController = [
   UsersController,
@@ -96,6 +97,7 @@ const authenticatedController = [
     AIProvidersService,
     AdminDashboardService,
     EncryptedSettingsService,
+    AdminEmailService,
   ],
   get exports() {
     return [...this.imports, ...this.providers];
