@@ -121,7 +121,7 @@ const HeygenProviderComponent = () => {
         selectedVoice: string().min(1, 'Voice is required'),
         aspect_ratio: string().min(1, 'Aspect ratio is required'),
         captions: string().min(1, 'Captions is required'),
-      })
+      }) as any
     ),
   });
 
