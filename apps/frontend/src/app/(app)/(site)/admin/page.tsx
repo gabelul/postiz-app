@@ -16,6 +16,7 @@ import {
   Activity,
   RefreshCw,
   Layers,
+  HeartPulse,
 } from 'lucide-react';
 
 /**
@@ -277,6 +278,23 @@ export default function AdminDashboardPage() {
             </p>
             <div className="mt-3 text-xs text-indigo-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
               Bulk Actions →
+            </div>
+          </a>
+
+          {/* Health Monitoring */}
+          <a
+            href="/admin/health"
+            className="block p-6 bg-rose-50 border-l-4 border-rose-500 rounded-lg hover:bg-rose-100 transition-colors group"
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <HeartPulse className="w-5 h-5 text-rose-600" />
+              <h3 className="font-bold text-rose-900">System Health</h3>
+            </div>
+            <p className="text-sm text-rose-700">
+              Monitor system performance, memory, database, and AI providers
+            </p>
+            <div className="mt-3 text-xs text-rose-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+              Health Status →
             </div>
           </a>
         </div>
