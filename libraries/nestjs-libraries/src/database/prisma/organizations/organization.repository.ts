@@ -215,6 +215,10 @@ export class OrganizationRepository {
     ip: string,
     userAgent: string
   ) {
+    // Check if this is the first user in the system
+    // If so, make them a system superAdmin (for admin panel access)
+    const userCount = await this._user.model.user.count();
+
     return this._organization.model.organization.create({
       data: {
         name: body.company,
@@ -226,6 +230,8 @@ export class OrganizationRepository {
             role: Role.SUPERADMIN,
             user: {
               create: {
+                // First user becomes system superAdmin for admin panel access
+                isSuperAdmin: userCount === 0,
                 activated: body.provider !== 'LOCAL' || !hasEmail,
                 email: body.email,
                 password: body.password
