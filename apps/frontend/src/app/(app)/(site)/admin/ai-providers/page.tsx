@@ -51,9 +51,14 @@ export default function AdminAIProvidersPage() {
    * Form state for adding/editing providers
    * Includes validation and error handling
    */
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    type: 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'together' | 'openai-compatible';
+    apiKey: string;
+    baseUrl: string;
+  }>({
     name: '',
-    type: 'openai' as const,
+    type: 'openai',
     apiKey: '',
     baseUrl: '',
   });

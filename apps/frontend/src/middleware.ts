@@ -14,10 +14,9 @@ acceptLanguage.languages(languages);
 // This function can be marked `async` if using `await` inside
 export async function middleware(request: NextRequest) {
   const nextUrl = request.nextUrl;
-  const authCookie =
-    request.cookies.get('auth') ||
-    request.headers.get('auth') ||
-    nextUrl.searchParams.get('loggedAuth');
+  // Normalize authCookie to string (cookies.get() returns RequestCookie object)
+  const cookieValue = request.cookies.get('auth');
+  const authCookie: string | null = cookieValue?.value || request.headers.get('auth') || nextUrl.searchParams.get('loggedAuth');
   const lng = request.cookies.has(cookieName)
     ? acceptLanguage.get(request.cookies.get(cookieName).value)
     : acceptLanguage.get(
@@ -108,7 +107,7 @@ export async function middleware(request: NextRequest) {
     // Check admin route access - requires superAdmin privileges
     if (nextUrl.pathname.startsWith('/admin') && authCookie) {
       try {
-        const userResponse = await internalFetch('/user/current-user', {
+        const userResponse = await internalFetch('/user/self', {
           headers: {
             auth: authCookie,
           },

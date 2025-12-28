@@ -21,6 +21,21 @@ import { PrismaService } from '@gitroom/nestjs-libraries/database/prisma/prisma.
 import type { $Enums } from '@prisma/client';
 
 /**
+ * Safely parse JSON string with fallback
+ * @param jsonString - The JSON string to parse
+ * @param fallback - The fallback value if parsing fails
+ * @returns Parsed object or fallback
+ */
+function safeJsonParse<T>(jsonString: string | null | undefined, fallback: T): T {
+  if (!jsonString) return fallback;
+  try {
+    return JSON.parse(jsonString) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+/**
  * Admin Users Controller
  *
  * Manages user administration including:
@@ -191,7 +206,7 @@ export class AdminUsersController {
 
     return {
       ...user,
-      customQuotas: user.customQuotas ? JSON.parse(user.customQuotas) : null,
+      customQuotas: safeJsonParse(user.customQuotas, null),
     };
   }
 
@@ -374,7 +389,7 @@ export class AdminUsersController {
       message: `Custom quotas set for user ${user.email}`,
       user: {
         ...updatedUser,
-        customQuotas: JSON.parse(updatedUser.customQuotas || '{}'),
+        customQuotas: safeJsonParse(updatedUser.customQuotas, {}),
       },
     };
   }

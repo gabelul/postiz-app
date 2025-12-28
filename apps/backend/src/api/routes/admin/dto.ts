@@ -3,11 +3,9 @@ import {
   IsBoolean,
   IsOptional,
   IsObject,
-  IsEnum,
+  IsIn,
   Min,
   IsNotEmpty,
-  IsArray,
-  ValidateIf,
 } from 'class-validator';
 
 /**
@@ -51,7 +49,7 @@ export class SetCustomLimitsDto {
  * DTO for setting subscription tier
  */
 export class SetSubscriptionTierDto {
-  @IsEnum(['FREE', 'STANDARD', 'PRO', 'TEAM', 'ULTIMATE'], {
+  @IsIn(['FREE', 'STANDARD', 'PRO', 'TEAM', 'ULTIMATE'], {
     message: 'Tier must be one of: FREE, STANDARD, PRO, TEAM, ULTIMATE',
   })
   tier!: 'FREE' | 'STANDARD' | 'PRO' | 'TEAM' | 'ULTIMATE';
@@ -110,8 +108,7 @@ export class ConfigureAiProviderDto {
 
   @IsOptional()
   @IsBoolean()
-  @default(false)
-  isDefault?: boolean;
+  isDefault?: boolean = false;
 
   @IsOptional()
   @IsObject()

@@ -17,6 +17,21 @@ import { PrismaService } from '@gitroom/nestjs-libraries/database/prisma/prisma.
 import type { $Enums } from '@prisma/client';
 
 /**
+ * Safely parse JSON string with fallback
+ * @param jsonString - The JSON string to parse
+ * @param fallback - The fallback value if parsing fails
+ * @returns Parsed object or fallback
+ */
+function safeJsonParse<T>(jsonString: string | null | undefined, fallback: T): T {
+  if (!jsonString) return fallback;
+  try {
+    return JSON.parse(jsonString) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+/**
  * Admin Organizations Controller
  *
  * Manages organization administration including:
@@ -112,7 +127,7 @@ export class AdminOrganizationsController {
       description: org.description,
       createdAt: org.createdAt,
       bypassBilling: org.bypassBilling,
-      customLimits: org.customLimits ? JSON.parse(org.customLimits) : null,
+      customLimits: safeJsonParse(org.customLimits, null),
       userCount: org.users.length,
       currentTier: org.subscription?.subscriptionTier || 'FREE',
       totalChannels: org.subscription?.totalChannels || 1,
@@ -144,8 +159,8 @@ export class AdminOrganizationsController {
         id: true,
         name: true,
         description: true,
-        apiKey: true,
-        paymentId: true,
+        // Intentionally exclude: apiKey (sensitive - org-level API key)
+        // Intentionally exclude: paymentId (sensitive - Stripe payment ID)
         createdAt: true,
         updatedAt: true,
         allowTrial: true,
@@ -199,9 +214,7 @@ export class AdminOrganizationsController {
 
     return {
       ...organization,
-      customLimits: organization.customLimits
-        ? JSON.parse(organization.customLimits)
-        : null,
+      customLimits: safeJsonParse(organization.customLimits, null),
     };
   }
 
@@ -390,7 +403,7 @@ export class AdminOrganizationsController {
       message: `Custom limits set for organization ${org.name}`,
       organization: {
         ...updated,
-        customLimits: JSON.parse(updated.customLimits || '{}'),
+        customLimits: safeJsonParse(updated.customLimits, {}),
       },
     };
   }
@@ -489,7 +502,7 @@ export class AdminOrganizationsController {
       message: `Organization ${org.name} made unlimited`,
       organization: {
         ...updated,
-        customLimits: JSON.parse(updated.customLimits || '{}'),
+        customLimits: safeJsonParse(updated.customLimits, {}),
       },
     };
   }

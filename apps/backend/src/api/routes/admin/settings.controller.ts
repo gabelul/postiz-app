@@ -17,6 +17,21 @@ import { GetUserFromRequest } from '@gitroom/nestjs-libraries/user/user.from.req
 import { User } from '@prisma/client';
 
 /**
+ * Safely parse JSON string with fallback
+ * @param jsonString - The JSON string to parse
+ * @param fallback - The fallback value if parsing fails
+ * @returns Parsed object or fallback
+ */
+function safeJsonParse<T>(jsonString: string | null | undefined, fallback: T): T {
+  if (!jsonString) return fallback;
+  try {
+    return JSON.parse(jsonString) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+/**
  * Admin Settings Controller
  *
  * Manages system-wide settings including:
@@ -345,7 +360,7 @@ export class AdminSettingsController {
       message: `Tier ${tier} configuration updated`,
       tier: {
         name: tier,
-        config: JSON.parse(setting.value),
+        config: safeJsonParse(setting.value, {}),
       },
     };
   }
@@ -401,7 +416,7 @@ export class AdminSettingsController {
     return {
       providers: providers.map((p) => ({
         key: p.key,
-        config: JSON.parse(p.value),
+        config: safeJsonParse(p.value, {}),
         description: p.description,
       })),
     };
@@ -451,7 +466,7 @@ export class AdminSettingsController {
       message: `Global AI provider ${provider} configured`,
       provider: {
         name: provider,
-        config: JSON.parse(setting.value),
+        config: safeJsonParse(setting.value, {}),
       },
     };
   }
