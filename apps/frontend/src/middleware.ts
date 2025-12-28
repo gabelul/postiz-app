@@ -105,6 +105,32 @@ export async function middleware(request: NextRequest) {
     return topResponse;
   }
   try {
+    // Check admin route access - requires superAdmin privileges
+    if (nextUrl.pathname.startsWith('/admin') && authCookie) {
+      try {
+        const userResponse = await internalFetch('/user/current-user', {
+          headers: {
+            auth: authCookie,
+          },
+        });
+
+        if (!userResponse.ok) {
+          return NextResponse.redirect(new URL('/auth/logout', nextUrl.href));
+        }
+
+        const userData = await userResponse.json();
+
+        // Check if user is superAdmin
+        if (!userData.isSuperAdmin) {
+          // Non-admin users trying to access admin routes get redirected
+          return NextResponse.redirect(new URL('/', nextUrl.href));
+        }
+      } catch (adminCheckError) {
+        console.error('Admin check failed:', adminCheckError);
+        return NextResponse.redirect(new URL('/auth/logout', nextUrl.href));
+        }
+      }
+
     if (org) {
       const { id } = await (
         await internalFetch('/user/join-org', {

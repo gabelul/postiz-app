@@ -7,6 +7,8 @@ import {
   UseGuards,
   Delete,
   Param,
+  NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AdminGuard } from '@gitroom/nestjs-libraries/guards/admin.guard';
@@ -108,7 +110,7 @@ export class AdminSettingsController {
   ) {
     // Validate key format
     if (!body.key || !body.value) {
-      throw new Error('Both key and value are required');
+      throw new BadRequestException('Both key and value are required');
     }
 
     const setting = await this._prismaService.systemSettings.upsert({
@@ -151,7 +153,7 @@ export class AdminSettingsController {
     });
 
     if (!setting) {
-      throw new Error(`Setting with key ${key} not found`);
+      throw new NotFoundException(`Setting with key ${key} not found`);
     }
 
     const updated = await this._prismaService.systemSettings.update({
@@ -183,7 +185,7 @@ export class AdminSettingsController {
     });
 
     if (!setting) {
-      throw new Error(`Setting with key ${key} not found`);
+      throw new NotFoundException(`Setting with key ${key} not found`);
     }
 
     await this._prismaService.systemSettings.delete({
@@ -320,7 +322,7 @@ export class AdminSettingsController {
     // Validate tier name
     const validTiers = ['FREE', 'STANDARD', 'PRO', 'TEAM', 'ULTIMATE'];
     if (!validTiers.includes(tier.toUpperCase())) {
-      throw new Error(`Invalid tier. Must be one of: ${validTiers.join(', ')}`);
+      throw new BadRequestException(`Invalid tier. Must be one of: ${validTiers.join(', ')}`);
     }
 
     // Store in system settings
@@ -359,7 +361,7 @@ export class AdminSettingsController {
     // Validate tier name
     const validTiers = ['FREE', 'STANDARD', 'PRO', 'TEAM', 'ULTIMATE'];
     if (!validTiers.includes(tier.toUpperCase())) {
-      throw new Error(`Invalid tier. Must be one of: ${validTiers.join(', ')}`);
+      throw new BadRequestException(`Invalid tier. Must be one of: ${validTiers.join(', ')}`);
     }
 
     // Delete custom tier configuration

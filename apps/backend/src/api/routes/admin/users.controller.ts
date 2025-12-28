@@ -7,6 +7,9 @@ import {
   Put,
   UseGuards,
   Query,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { User } from '@prisma/client';
@@ -140,7 +143,7 @@ export class AdminUsersController {
    * Get detailed information about a specific user
    *
    * @param userId - The ID of the user
-   * @returns User details including organizations and quotas
+   * @returns User details including organizations and quotas (excluding sensitive data)
    */
   @Get('/:userId')
   @ApiOperation({
@@ -148,23 +151,48 @@ export class AdminUsersController {
     description: 'Retrieve detailed information about a specific user',
   })
   async getUser(@Param('userId') userId: string) {
-    // Fetch user with all related data
+    // Fetch user with all related data, excluding sensitive fields like password
     const user = await this._prismaService.user.findUnique({
       where: { id: userId },
-      include: {
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        lastName: true,
+        bio: true,
+        pictureId: true,
+        isSuperAdmin: true,
+        customQuotas: true,
+        lastOnline: true,
+        connectedAccount: true,
+        createdAt: true,
+        updatedAt: true,
+        activated: true,
+        marketplace: true,
         organizations: {
-          include: {
-            organization: true,
+          select: {
+            id: true,
+            role: true,
+            disabled: true,
+            organization: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
       },
     });
 
     if (!user) {
-      throw new Error(`User with ID ${userId} not found`);
+      throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
-    return user;
+    return {
+      ...user,
+      customQuotas: user.customQuotas ? JSON.parse(user.customQuotas) : null,
+    };
   }
 
   /**
@@ -181,14 +209,21 @@ export class AdminUsersController {
     summary: 'Promote user to superAdmin',
     description: 'Grant superAdmin privileges to a user',
   })
-  async promoteToAdmin(@Param('userId') userId: string) {
-    // Prevent self-demotion check - but allow admin to promote themselves first time
+  async promoteToAdmin(
+    @Param('userId') userId: string,
+    @GetUserFromRequest() requestUser: User
+  ) {
+    // Prevent self-promotion for security
+    if (userId === requestUser.id) {
+      throw new ForbiddenException('Cannot promote yourself to superAdmin');
+    }
+
     const user = await this._prismaService.user.findUnique({
       where: { id: userId },
     });
 
     if (!user) {
-      throw new Error(`User with ID ${userId} not found`);
+      throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
     // Update user to superAdmin
@@ -229,45 +264,53 @@ export class AdminUsersController {
     @Param('userId') userId: string,
     @GetUserFromRequest() requestUser: User
   ) {
-    // Fetch user to check current status
-    const user = await this._prismaService.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      throw new Error(`User with ID ${userId} not found`);
+    // Prevent self-demotion
+    if (userId === requestUser.id) {
+      throw new ForbiddenException('Cannot demote yourself from superAdmin');
     }
 
-    // Count remaining superAdmins
-    const superAdminCount = await this._prismaService.user.count({
-      where: { isSuperAdmin: true },
+    // Use transaction to prevent race condition
+    return this._prismaService.$transaction(async (tx) => {
+      // Fetch user to check current status
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new NotFoundException(`User with ID ${userId} not found`);
+      }
+
+      // Count remaining superAdmins
+      const superAdminCount = await tx.user.count({
+        where: { isSuperAdmin: true },
+      });
+
+      // Prevent demoting the only superAdmin
+      if (user.isSuperAdmin && superAdminCount <= 1) {
+        throw new ForbiddenException(
+          'Cannot demote the only superAdmin in the system. Promote another user first.'
+        );
+      }
+
+      // Update user to regular user
+      const updatedUser = await tx.user.update({
+        where: { id: userId },
+        data: { isSuperAdmin: false },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          isSuperAdmin: true,
+          createdAt: true,
+        },
+      });
+
+      return {
+        success: true,
+        message: `User ${user.email} demoted from superAdmin`,
+        user: updatedUser,
+      };
     });
-
-    // Prevent demoting the only superAdmin
-    if (user.isSuperAdmin && superAdminCount <= 1) {
-      throw new Error(
-        'Cannot demote the only superAdmin in the system. Promote another user first.'
-      );
-    }
-
-    // Update user to regular user
-    const updatedUser = await this._prismaService.user.update({
-      where: { id: userId },
-      data: { isSuperAdmin: false },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        isSuperAdmin: true,
-        createdAt: true,
-      },
-    });
-
-    return {
-      success: true,
-      message: `User ${user.email} demoted from superAdmin`,
-      user: updatedUser,
-    };
   }
 
   /**
@@ -303,12 +346,12 @@ export class AdminUsersController {
     });
 
     if (!user) {
-      throw new Error(`User with ID ${userId} not found`);
+      throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
     // Validate quotas object
     if (!body || typeof body !== 'object') {
-      throw new Error('Quotas must be a valid object');
+      throw new BadRequestException('Quotas must be a valid object');
     }
 
     // Update user with custom quotas
@@ -356,7 +399,7 @@ export class AdminUsersController {
     });
 
     if (!user) {
-      throw new Error(`User with ID ${userId} not found`);
+      throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
     // Reset quotas to null

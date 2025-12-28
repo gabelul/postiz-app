@@ -7,6 +7,8 @@ import {
   Put,
   UseGuards,
   Query,
+  NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AdminGuard } from '@gitroom/nestjs-libraries/guards/admin.guard';
@@ -128,7 +130,7 @@ export class AdminOrganizationsController {
    * Get detailed information about a specific organization
    *
    * @param orgId - The ID of the organization
-   * @returns Organization details with all related data
+   * @returns Organization details with all related data (excluding sensitive API keys)
    */
   @Get('/:orgId')
   @ApiOperation({
@@ -138,27 +140,61 @@ export class AdminOrganizationsController {
   async getOrganization(@Param('orgId') orgId: string) {
     const organization = await this._prismaService.organization.findUnique({
       where: { id: orgId },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        apiKey: true,
+        paymentId: true,
+        createdAt: true,
+        updatedAt: true,
+        allowTrial: true,
+        isTrailing: true,
+        bypassBilling: true,
+        customLimits: true,
         users: {
-          include: {
+          select: {
+            id: true,
+            role: true,
+            disabled: true,
             user: {
               select: {
                 id: true,
                 email: true,
                 name: true,
+                lastName: true,
                 isSuperAdmin: true,
               },
             },
           },
         },
         subscription: true,
-        aiProviders: true,
+        aiProviders: {
+          select: {
+            id: true,
+            organizationId: true,
+            name: true,
+            type: true,
+            baseUrl: true,
+            customConfig: true,
+            enabled: true,
+            isDefault: true,
+            availableModels: true,
+            lastTestedAt: true,
+            testStatus: true,
+            testError: true,
+            createdAt: true,
+            updatedAt: true,
+            deletedAt: true,
+            // Intentionally exclude: apiKey (sensitive)
+          },
+        },
         aiTaskAssignments: true,
       },
     });
 
     if (!organization) {
-      throw new Error(`Organization with ID ${orgId} not found`);
+      throw new NotFoundException(`Organization with ID ${orgId} not found`);
     }
 
     return {
@@ -195,7 +231,7 @@ export class AdminOrganizationsController {
     // Validate tier
     const validTiers = ['FREE', 'STANDARD', 'PRO', 'TEAM', 'ULTIMATE'];
     if (!validTiers.includes(body.tier.toUpperCase())) {
-      throw new Error(
+      throw new BadRequestException(
         `Invalid tier. Must be one of: ${validTiers.join(', ')}`
       );
     }
@@ -206,7 +242,7 @@ export class AdminOrganizationsController {
     });
 
     if (!org) {
-      throw new Error(`Organization with ID ${orgId} not found`);
+      throw new NotFoundException(`Organization with ID ${orgId} not found`);
     }
 
     // Get or create subscription
@@ -270,7 +306,7 @@ export class AdminOrganizationsController {
     });
 
     if (!org) {
-      throw new Error(`Organization with ID ${orgId} not found`);
+      throw new NotFoundException(`Organization with ID ${orgId} not found`);
     }
 
     // Update bypass billing flag
@@ -328,12 +364,12 @@ export class AdminOrganizationsController {
     });
 
     if (!org) {
-      throw new Error(`Organization with ID ${orgId} not found`);
+      throw new NotFoundException(`Organization with ID ${orgId} not found`);
     }
 
     // Validate limits object
     if (!body || typeof body !== 'object') {
-      throw new Error('Limits must be a valid object');
+      throw new BadRequestException('Limits must be a valid object');
     }
 
     // Update organization with custom limits
@@ -379,7 +415,7 @@ export class AdminOrganizationsController {
     });
 
     if (!org) {
-      throw new Error(`Organization with ID ${orgId} not found`);
+      throw new NotFoundException(`Organization with ID ${orgId} not found`);
     }
 
     // Reset limits to null
@@ -423,7 +459,7 @@ export class AdminOrganizationsController {
     });
 
     if (!org) {
-      throw new Error(`Organization with ID ${orgId} not found`);
+      throw new NotFoundException(`Organization with ID ${orgId} not found`);
     }
 
     // Set unlimited limits and bypass billing

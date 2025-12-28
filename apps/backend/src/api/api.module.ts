@@ -36,8 +36,7 @@ import { ThirdPartyController } from '@gitroom/backend/api/routes/third-party.co
 import { MonitorController } from '@gitroom/backend/api/routes/monitor.controller';
 import { AdminUsersController } from '@gitroom/backend/api/routes/admin/users.controller';
 import { AdminOrganizationsController } from '@gitroom/backend/api/routes/admin/organizations.controller';
-// TODO: AdminSettingsController - Temporarily disabled due to missing systemSettings table in schema
-// import { AdminSettingsController } from '@gitroom/backend/api/routes/admin/settings.controller';
+import { AdminSettingsController } from '@gitroom/backend/api/routes/admin/settings.controller';
 
 const authenticatedController = [
   UsersController,
@@ -69,8 +68,7 @@ const authenticatedController = [
     // Admin Controllers - Require superAdmin privileges
     AdminUsersController,
     AdminOrganizationsController,
-    // TODO: AdminSettingsController - Disabled due to missing systemSettings table
-    // AdminSettingsController,
+    AdminSettingsController,
     ...authenticatedController,
   ],
   providers: [
@@ -93,6 +91,13 @@ const authenticatedController = [
 })
 export class ApiModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(AuthMiddleware).forRoutes(...authenticatedController);
+    // Apply AuthMiddleware to all authenticated controllers AND admin controllers
+    // Admin controllers need request.user populated for AdminGuard to work
+    consumer.apply(AuthMiddleware).forRoutes(
+      ...authenticatedController,
+      AdminUsersController,
+      AdminOrganizationsController,
+      AdminSettingsController
+    );
   }
 }

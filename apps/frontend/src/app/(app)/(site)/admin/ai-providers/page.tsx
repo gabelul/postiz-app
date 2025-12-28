@@ -590,7 +590,13 @@ export default function AdminAIProvidersPage() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => {
-                      // TODO: Implement edit functionality
+                      // Pre-populate form with existing provider data for editing
+                      setFormData({
+                        name: provider.name,
+                        type: provider.type,
+                        apiKey: '', // Don't pre-fill API key for security - user must re-enter
+                        baseUrl: provider.baseUrl || providerTypes[provider.type]?.defaultUrl || '',
+                      });
                       setEditingId(provider.id);
                       setShowAddForm(true);
                     }}
