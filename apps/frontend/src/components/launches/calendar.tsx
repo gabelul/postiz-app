@@ -110,10 +110,10 @@ export const DayView = () => {
   const options = useMemo(() => {
     const createdPosts = posts.map((post) => ({
       integration: [integrations.find((i) => i.id === post.integration.id)!],
-      image: post.integration.picture,
-      identifier: post.integration.providerIdentifier,
-      id: post.integration.id,
-      name: post.integration.name,
+      image: post?.integration?.picture || '',
+      identifier: post?.integration?.providerIdentifier || '',
+      id: post?.integration?.id || '',
+      name: post?.integration?.name || '',
       time: dayjs
         .utc(post.publishDate)
         .diff(dayjs.utc(post.publishDate).startOf('day'), 'minute'),
@@ -126,11 +126,11 @@ export const DayView = () => {
             ...integrations.flatMap((p) =>
               p.time.flatMap((t) => ({
                 integration: p,
-                identifier: p.identifier,
-                name: p.name,
-                id: p.id,
-                image: p.picture,
-                time: t.time,
+                identifier: p?.identifier,
+                name: p?.name,
+                id: p?.id,
+                image: p?.picture,
+                time: t?.time,
               }))
             ),
           ],
@@ -142,37 +142,39 @@ export const DayView = () => {
   }, [integrations, posts]);
 
   return (
-    <div className="flex flex-col gap-[10px] flex-1">
-      {options.map((option) => (
-        <Fragment key={option[0].time}>
-          <div className="text-center text-[14px]">
-            {newDayjs()
-              .utc()
-              .startOf('day')
-              .add(option[0].time, 'minute')
-              .local()
-              .format(isUSCitizen() ? 'hh:mm A' : 'LT')}
-          </div>
-          <div
-            key={option[0].time}
-            className="min-h-[60px] rounded-[10px] flex justify-center items-center gap-[10px] mb-[20px]"
-          >
-            <CalendarContext.Provider
-              value={{
-                ...calendar,
-                integrations: option.flatMap((p) => p.integration),
-              }}
+    <div className="flex flex-col gap-[10px] flex-1 relative">
+      <div className="absolute start-0 top-0 w-full h-full flex flex-col overflow-auto scrollbar scrollbar-thumb-fifth scrollbar-track-newBgColor">
+        {options.map((option) => (
+          <Fragment key={option[0].time}>
+            <div className="text-center text-[14px] min-h-[21px]">
+              {newDayjs()
+                .utc()
+                .startOf('day')
+                .add(option[0].time, 'minute')
+                .local()
+                .format(isUSCitizen() ? 'hh:mm A' : 'LT')}
+            </div>
+            <div
+              key={option[0].time}
+              className="min-h-[60px] rounded-[10px] flex justify-center items-center gap-[10px] mb-[20px]"
             >
-              <CalendarColumn
-                getDate={currentDay
-                  .startOf('day')
-                  .add(option[0].time, 'minute')
-                  .local()}
-              />
-            </CalendarContext.Provider>
-          </div>
-        </Fragment>
-      ))}
+              <CalendarContext.Provider
+                value={{
+                  ...calendar,
+                  integrations: option.flatMap((p) => p.integration),
+                }}
+              >
+                <CalendarColumn
+                  getDate={currentDay
+                    .startOf('day')
+                    .add(option[0].time, 'minute')
+                    .local()}
+                />
+              </CalendarContext.Provider>
+            </div>
+          </Fragment>
+        ))}
+      </div>
     </div>
   );
 };
@@ -200,13 +202,13 @@ export const WeekView = () => {
 
   return (
     <div className="flex flex-col text-textColor flex-1">
-      <div className="flex-1">
-        <div className="grid [grid-template-columns:136px_repeat(7,_minmax(0,_1fr))] gap-[4px] rounded-[10px]">
-          <div className="z-10 bg-newTableHeader flex justify-center items-center flex-col h-[62px] rounded-[8px]"></div>
+      <div className="flex-1 relative">
+        <div className="grid [grid-template-columns:136px_repeat(7,_minmax(0,_1fr))] gap-[4px] rounded-[10px] absolute h-full start-0 top-0 w-full overflow-auto scrollbar scrollbar-thumb-fifth scrollbar-track-newBgColor">
+          <div className="z-10 bg-newTableHeader flex justify-center items-center flex-col h-[62px] rounded-[8px] sticky top-0"></div>
           {localizedDays.map((day, index) => (
             <div
               key={day.name}
-              className="z-10 p-2 text-center bg-newTableHeader flex justify-center items-center flex-col h-[62px] rounded-[8px]"
+              className="p-2 text-center bg-newTableHeader flex justify-center items-center flex-col h-[62px] rounded-[8px] sticky top-0 z-[20]"
             >
               <div className="text-[14px] font-[500] text-newTableText">
                 {day.name}
@@ -299,12 +301,12 @@ export const MonthView = () => {
 
   return (
     <div className="flex flex-col text-textColor flex-1">
-      <div className="flex-1 flex">
-        <div className="grid grid-cols-7 grid-rows-[62px_auto] gap-[4px] rounded-[10px] flex-1">
+      <div className="flex-1 flex relative">
+        <div className="grid grid-cols-7 grid-rows-[62px_auto] gap-[4px] rounded-[10px] absolute start-0 top-0 overflow-auto w-full h-full scrollbar scrollbar-thumb-tableBorder scrollbar-track-secondary">
           {localizedDays.map((day) => (
             <div
               key={day}
-              className="z-10 p-2 bg-newTableHeader flex justify-center items-center flex-col h-[62px] rounded-[8px]"
+              className="z-[20] p-2 bg-newTableHeader flex justify-center items-center flex-col h-[62px] rounded-[8px] sticky top-0"
             >
               <div>{day}</div>
             </div>
@@ -312,7 +314,7 @@ export const MonthView = () => {
           {calendarDays.map((date, index) => (
             <div
               key={index}
-              className="text-center items-center justify-center flex min-h-[100px]"
+              className="text-center items-center justify-center flex"
             >
               <CalendarColumn
                 getDate={newDayjs(date.day).endOf('day')}
@@ -469,6 +471,7 @@ export const CalendarColumn: FC<{
           closeOnEscape: false,
           withCloseButton: false,
           askClose: true,
+          fullScreen: true,
           classNames: {
             modal: 'w-[100%] max-w-[1400px] text-textColor',
           },
@@ -545,15 +548,16 @@ export const CalendarColumn: FC<{
     if (set === 'exit') return;
 
     modal.openModal({
+      id: 'add-edit-modal',
       closeOnClickOutside: false,
+      removeLayout: true,
       closeOnEscape: false,
       withCloseButton: false,
-      removeLayout: true,
       askClose: true,
+      fullScreen: true,
       classNames: {
         modal: 'w-[100%] max-w-[1400px] text-textColor',
       },
-      id: 'add-edit-modal',
       children: (
         <AddEditModal
           allIntegrations={integrations.map((p) => ({
