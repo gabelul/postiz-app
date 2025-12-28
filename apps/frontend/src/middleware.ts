@@ -14,9 +14,13 @@ acceptLanguage.languages(languages);
 // This function can be marked `async` if using `await` inside
 export async function middleware(request: NextRequest) {
   const nextUrl = request.nextUrl;
+
   // Normalize authCookie to string (cookies.get() returns RequestCookie object)
   const cookieValue = request.cookies.get('auth');
-  const authCookie: string | null = cookieValue?.value || request.headers.get('auth') || nextUrl.searchParams.get('loggedAuth');
+  const authCookie: string | null =
+    cookieValue?.value ||
+    request.headers.get('auth') ||
+    nextUrl.searchParams.get('loggedAuth');
   const lng = request.cookies.has(cookieName)
     ? acceptLanguage.get(request.cookies.get(cookieName).value)
     : acceptLanguage.get(
@@ -127,8 +131,8 @@ export async function middleware(request: NextRequest) {
       } catch (adminCheckError) {
         console.error('Admin check failed:', adminCheckError);
         return NextResponse.redirect(new URL('/auth/logout', nextUrl.href));
-        }
       }
+    }
 
     if (org) {
       const { id } = await (

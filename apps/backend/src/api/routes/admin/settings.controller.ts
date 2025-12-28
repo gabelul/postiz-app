@@ -15,21 +15,7 @@ import { AdminGuard } from '@gitroom/nestjs-libraries/guards/admin.guard';
 import { PrismaService } from '@gitroom/nestjs-libraries/database/prisma/prisma.service';
 import { GetUserFromRequest } from '@gitroom/nestjs-libraries/user/user.from.request';
 import { User } from '@prisma/client';
-
-/**
- * Safely parse JSON string with fallback
- * @param jsonString - The JSON string to parse
- * @param fallback - The fallback value if parsing fails
- * @returns Parsed object or fallback
- */
-function safeJsonParse<T>(jsonString: string | null | undefined, fallback: T): T {
-  if (!jsonString) return fallback;
-  try {
-    return JSON.parse(jsonString) as T;
-  } catch {
-    return fallback;
-  }
-}
+import { safeJsonParse } from '@gitroom/nestjs-libraries/utils';
 
 /**
  * Admin Settings Controller

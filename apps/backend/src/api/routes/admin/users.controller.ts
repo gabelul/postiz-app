@@ -19,21 +19,7 @@ import { GetOrgFromRequest } from '@gitroom/nestjs-libraries/user/org.from.reque
 import { Organization } from '@prisma/client';
 import { PrismaService } from '@gitroom/nestjs-libraries/database/prisma/prisma.service';
 import type { $Enums } from '@prisma/client';
-
-/**
- * Safely parse JSON string with fallback
- * @param jsonString - The JSON string to parse
- * @param fallback - The fallback value if parsing fails
- * @returns Parsed object or fallback
- */
-function safeJsonParse<T>(jsonString: string | null | undefined, fallback: T): T {
-  if (!jsonString) return fallback;
-  try {
-    return JSON.parse(jsonString) as T;
-  } catch {
-    return fallback;
-  }
-}
+import { safeJsonParse } from '@gitroom/nestjs-libraries/utils';
 
 /**
  * Admin Users Controller

@@ -106,9 +106,13 @@ export class ConfigureAiProviderDto {
   @IsString()
   model?: string;
 
-  @IsOptional()
+  /**
+   * isDefault is required with a default value of false.
+   * When omitted in the request body, class-validator will use the default.
+   * This is intentional - new providers should not be default unless explicitly set.
+   */
   @IsBoolean()
-  isDefault?: boolean = false;
+  isDefault: boolean = false;
 
   @IsOptional()
   @IsObject()
