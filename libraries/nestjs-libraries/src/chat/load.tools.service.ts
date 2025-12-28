@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Agent } from '@mastra/core/agent';
-import { openai } from '@ai-sdk/openai';
+import { createOpenAI, openai } from '@ai-sdk/openai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { Memory } from '@mastra/memory';
 import { pStore } from '@gitroom/nestjs-libraries/chat/mastra.store';
@@ -83,13 +83,19 @@ export class LoadToolsService {
         case 'ollama':
         case 'together':
         case 'custom':
-          // For OpenAI-compatible providers, use the OpenAI SDK with custom endpoint
+          // For OpenAI-compatible providers, get the adapter and extract configuration
           const adapter = this._adapterFactory.createAdapter(provider);
-          const openaiClient = adapter.getClient();
 
-          // Use the openai integration from ai-sdk
-          // Note: Custom provider configuration is handled by the adapter factory
-          agentModel = openai(model);
+          // Get the OpenAI client which contains the baseURL configuration
+          const openaiClient = adapter.getClient() as any;
+
+          // Use createOpenAI to create a provider with custom baseURL
+          // Then call it with the model name
+          const customOpenAI = createOpenAI({
+            baseURL: openaiClient.baseURL,
+            apiKey: openaiClient.apiKey,
+          });
+          agentModel = customOpenAI(model);
           break;
 
         default:

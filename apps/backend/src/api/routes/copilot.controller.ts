@@ -128,7 +128,14 @@ export class CopilotController {
       req?.body?.variables?.properties?.integrations || []
     );
 
-    runtimeContext.set('organization', JSON.stringify(organization));
+    // Only pass non-sensitive organization data to agent context
+    // Exclude: apiKey, paymentId, and other sensitive fields
+    const safeOrganization = {
+      id: organization.id,
+      name: organization.name,
+      description: organization.description,
+    };
+    runtimeContext.set('organization', JSON.stringify(safeOrganization));
     runtimeContext.set('ui', 'true');
 
     const agents = MastraAgent.getLocalAgents({
