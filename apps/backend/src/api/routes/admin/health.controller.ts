@@ -11,6 +11,27 @@ import { PrismaService } from '@gitroom/nestjs-libraries/database/prisma/prisma.
 import { Throttle } from '@nestjs/throttler';
 
 /**
+ * Safely parse JSON with fallback to empty object
+ *
+ * @param value - JSON string to parse
+ * @param fallback - Default value if parsing fails (default: {})
+ * @returns Parsed object or fallback
+ */
+function safeJsonParse<T = Record<string, unknown>>(
+  value: string | null | undefined,
+  fallback: T
+): T {
+  if (!value) {
+    return fallback;
+  }
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+/**
  * System health metrics
  */
 interface SystemHealth {
@@ -21,7 +42,7 @@ interface SystemHealth {
     status: 'connected' | 'disconnected';
     latency?: number;
   };
-  memory: {
+  heapMemory: {
     used: number;
     total: number;
     percentage: number;
@@ -92,7 +113,7 @@ export class AdminHealthController {
             latency: { type: 'number' },
           },
         },
-        memory: {
+        heapMemory: {
           type: 'object',
           properties: {
             used: { type: 'number' },
@@ -128,17 +149,17 @@ export class AdminHealthController {
 
     const dbLatency = Date.now() - startTime;
 
-    // Memory usage
+    // Heap memory usage (V8 heap, not system/process memory)
     const memoryUsage = process.memoryUsage();
-    const memoryTotal = memoryUsage.heapTotal;
-    const memoryUsed = memoryUsage.heapUsed;
-    const memoryPercentage = (memoryUsed / memoryTotal) * 100;
+    const heapTotal = memoryUsage.heapTotal;
+    const heapUsed = memoryUsage.heapUsed;
+    const heapPercentage = (heapUsed / heapTotal) * 100;
 
     // Determine overall health status
     let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
-    if (memoryPercentage > 90) {
+    if (heapPercentage > 90) {
       status = 'unhealthy';
-    } else if (memoryPercentage > 75 || dbLatency > 1000) {
+    } else if (heapPercentage > 75 || dbLatency > 1000) {
       status = 'degraded';
     }
 
@@ -150,10 +171,10 @@ export class AdminHealthController {
         status: 'connected',
         latency: dbLatency,
       },
-      memory: {
-        used: Math.round(memoryUsed / 1024 / 1024), // MB
-        total: Math.round(memoryTotal / 1024 / 1024), // MB
-        percentage: Math.round(memoryPercentage * 100) / 100,
+      heapMemory: {
+        used: Math.round(heapUsed / 1024 / 1024), // MB
+        total: Math.round(heapTotal / 1024 / 1024), // MB
+        percentage: Math.round(heapPercentage * 100) / 100,
       },
       stats: {
         totalUsers,
@@ -205,10 +226,16 @@ export class AdminHealthController {
       },
     });
 
-    // Map to provider status
+    // Map to provider status (with safe JSON parsing to prevent 500 on invalid data)
     const providers: AiProviderStatus[] = providerSettings.map((setting) => {
       const providerName = setting.key.replace('ai.provider.', '');
-      const config = JSON.parse(setting.value || '{}');
+      const config = safeJsonParse<{
+        enabled?: boolean;
+        apiKey?: string;
+        model?: string;
+        lastUsed?: string;
+        errorCount?: number;
+      }>(setting.value, {});
 
       return {
         provider: providerName,

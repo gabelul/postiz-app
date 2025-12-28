@@ -178,10 +178,29 @@ export class BulkOperationsService {
       throw new Error('Admin user not found');
     }
 
-    // Count superAdmins to prevent demoting the last one
-    const superAdminCount = await this._prismaService.user.count({
+    // Count how many superAdmins we're about to demote to prevent full lockout
+    const usersToDemote = await this._prismaService.user.findMany({
+      where: {
+        id: { in: userIds },
+        isSuperAdmin: true,
+      },
+      select: { id: true },
+    });
+
+    const currentSuperAdminCount = await this._prismaService.user.count({
       where: { isSuperAdmin: true },
     });
+
+    // Prevent demoting all or all-but-one superAdmins (must keep at least 2 if demoting self,
+    // or at least 1 if not demoting self)
+    const selfIsBeingDemoted = userIds.includes(adminId);
+    const minRequired = selfIsBeingDemoted ? 2 : 1;
+
+    if (usersToDemote.length >= currentSuperAdminCount - minRequired + 1) {
+      throw new Error(
+        `Cannot demote ${usersToDemote.length} superAdmin(s). At least ${minRequired} superAdmin must remain.`
+      );
+    }
 
     for (const userId of userIds) {
       try {
@@ -199,8 +218,12 @@ export class BulkOperationsService {
             throw new Error('User not found');
           }
 
-          // Check if this is the last superAdmin
-          if (user.isSuperAdmin && superAdminCount <= 1) {
+          // Double-check: count current superAdmins within transaction
+          const currentCount = await tx.user.count({
+            where: { isSuperAdmin: true },
+          });
+
+          if (user.isSuperAdmin && currentCount <= 1) {
             throw new Error('Cannot demote the last superAdmin');
           }
 

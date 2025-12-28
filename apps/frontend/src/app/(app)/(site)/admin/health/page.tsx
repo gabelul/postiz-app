@@ -2,7 +2,6 @@
 
 import { useSystemHealth, useAiProviderHealth, useDatabaseHealth } from '@gitroom/frontend/hooks/admin/use-admin-health';
 import type { SystemHealth, AiProviderStatus } from '@gitroom/frontend/hooks/admin/use-admin-health';
-import { useEffect } from 'react';
 
 /**
  * Health status badge component
@@ -76,7 +75,10 @@ function MetricCard({
 }
 
 /**
- * Memory usage bar component
+ * Heap memory usage bar component
+ *
+ * Displays V8 heap memory utilization (not system/process memory).
+ * This is the JavaScript heap allocated by Node.js, not total process RSS.
  */
 function MemoryBar({ used, total, percentage }: { used: number; total: number; percentage: number }) {
   const getColor = (pct: number) => {
@@ -88,7 +90,7 @@ function MemoryBar({ used, total, percentage }: { used: number; total: number; p
   return (
     <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
       <div className="flex items-center justify-between mb-2">
-        <p className="text-sm font-medium text-gray-700">Memory Usage</p>
+        <p className="text-sm font-medium text-gray-700">Heap Memory Usage</p>
         <p className="text-sm text-gray-600">
           {used} MB / {total} MB
         </p>
@@ -99,7 +101,7 @@ function MemoryBar({ used, total, percentage }: { used: number; total: number; p
           style={{ width: `${percentage}%` }}
         />
       </div>
-      <p className="text-xs text-gray-500 mt-1">{percentage.toFixed(1)}% used</p>
+      <p className="text-xs text-gray-500 mt-1">{percentage.toFixed(1)}% used (V8 heap)</p>
     </div>
   );
 }
@@ -159,13 +161,6 @@ export default function AdminHealthPage() {
     error: dbError,
     refetch: refetchDb,
   } = useDatabaseHealth();
-
-  // Auto-refresh on mount and interval
-  useEffect(() => {
-    refetchHealth();
-    refetchAi();
-    refetchDb();
-  }, [refetchHealth, refetchAi, refetchDb]);
 
   if (healthLoading) {
     return (
@@ -260,12 +255,12 @@ export default function AdminHealthPage() {
         />
       </div>
 
-      {/* Memory and Database */}
+      {/* Heap Memory and Database */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <MemoryBar
-          used={systemHealth.memory.used}
-          total={systemHealth.memory.total}
-          percentage={systemHealth.memory.percentage}
+          used={systemHealth.heapMemory.used}
+          total={systemHealth.heapMemory.total}
+          percentage={systemHealth.heapMemory.percentage}
         />
         <MetricCard
           title="Database Latency"

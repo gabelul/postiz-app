@@ -14,7 +14,7 @@ export interface SystemHealth {
     status: 'connected' | 'disconnected';
     latency?: number;
   };
-  memory: {
+  heapMemory: {
     used: number;
     total: number;
     percentage: number;
@@ -71,6 +71,7 @@ export const healthKeys = {
 export function useSystemHealth(
   options?: Omit<UseQueryOptions<SystemHealth, Error>, 'queryKey' | 'queryFn'>
 ) {
+  const fetch = useFetch();
   return useQuery({
     queryKey: healthKeys.system(),
     queryFn: async () => {
@@ -94,6 +95,7 @@ export function useSystemHealth(
 export function useAiProviderHealth(
   options?: Omit<UseQueryOptions<AiProviderStatus[], Error>, 'queryKey' | 'queryFn'>
 ) {
+  const fetch = useFetch();
   return useQuery({
     queryKey: healthKeys.aiProviders(),
     queryFn: async () => {
@@ -117,6 +119,7 @@ export function useAiProviderHealth(
 export function useDatabaseHealth(
   options?: Omit<UseQueryOptions<DatabaseHealth, Error>, 'queryKey' | 'queryFn'>
 ) {
+  const fetch = useFetch();
   return useQuery({
     queryKey: healthKeys.database(),
     queryFn: async () => {
