@@ -100,6 +100,17 @@
 - Redis (BullMQ)
 - Resend (email notifications)
 
+## 📚 Documentation
+
+Comprehensive documentation is available in the `/docs` directory:
+
+- **[Deployment](docs/deployment/)** - Guides for deploying Postiz in different environments
+- **[Troubleshooting](docs/troubleshooting/)** - Common issues and debugging guides
+- **[Testing](docs/testing/)** - Testing procedures and verification steps
+- **[Development](docs/development/)** - Developer guides, workflow, and coding standards
+
+For external documentation, visit [docs.postiz.com](https://docs.postiz.com)
+
 ## 🤖 AI Provider System
 
 Postiz supports multiple AI providers with automatic rotation, failover, and cost optimization. Configure multiple providers like OpenAI, OpenRouter, Azure OpenAI, Groq, and more.
