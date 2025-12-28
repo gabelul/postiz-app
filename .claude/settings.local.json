@@ -13,7 +13,12 @@
       "Bash(ls:*)",
       "Bash(pnpm test:*)",
       "Bash(pnpm build:*)",
-      "Bash(pnpm run prisma-generate:*)"
+      "Bash(pnpm run prisma-generate:*)",
+      "mcp__zen__clink",
+      "Bash(find:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(cat:*)",
+      "Bash(pnpm --filter postiz-frontend run build:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,18 +1,32 @@
 {
   "name": "postiz-app",
-  "description": "Custom tool selection for postiz-app",
-  "mode": "custom",
+  "description": "Customized frontend preset for postiz-app",
+  "mode": "hybrid",
+  "preset": "frontend",
   "tools": [
-    "consensus",
+    "clink",
     "codereview",
-    "chat",
+    "planner",
+    "apilookup",
     "uiux",
-    "install_agents"
+    "debug"
   ],
-  "token_budget": 9419,
-  "estimated_tokens": 9419,
+  "added_tools": [
+    "clink",
+    "codereview",
+    "planner",
+    "apilookup",
+    "debug"
+  ],
+  "removed_tools": [
+    "analyze",
+    "testgen",
+    "mobile_design"
+  ],
+  "token_budget": 11900,
+  "estimated_tokens": 11900,
   "project_type": "react",
   "auto_created": false,
-  "created_date": "2025-09-27T10:48:08.209979",
-  "last_modified": "2025-09-27T10:48:08.210036"
+  "created_date": "2025-12-28T10:53:59.639512",
+  "last_modified": "2025-12-28T10:53:59.639822"
 }

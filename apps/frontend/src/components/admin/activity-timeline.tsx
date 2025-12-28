@@ -21,6 +21,11 @@ interface ActivityTimelineProps {
    * CSS class name for custom styling
    */
   className?: string;
+
+  /**
+   * Optional refetch function for retry functionality
+   */
+  onRetry?: () => void;
 }
 
 /**
@@ -38,6 +43,7 @@ interface ActivityTimelineProps {
 export function ActivityTimeline({
   limit = 10,
   className = '',
+  onRetry,
 }: ActivityTimelineProps) {
   const { data: activities, isLoading, error } = useAdminActivity(limit);
 
@@ -99,12 +105,23 @@ export function ActivityTimeline({
         <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
         <p className="text-gray-500 text-sm">
           Failed to load activity.{' '}
-          <button
-            onClick={() => window.location.reload()}
-            className="text-blue-600 hover:underline"
-          >
-            Retry
-          </button>
+          {onRetry ? (
+            <button
+              onClick={onRetry}
+              className="text-blue-600 hover:underline"
+              aria-label="Retry loading activity"
+            >
+              Retry
+            </button>
+          ) : (
+            <button
+              onClick={() => window.location.reload()}
+              className="text-blue-600 hover:underline"
+              aria-label="Reload page to retry loading activity"
+            >
+              Reload Page
+            </button>
+          )}
         </p>
       </div>
     );

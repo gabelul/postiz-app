@@ -1,9 +1,11 @@
 'use client';
 
 import { Metadata } from 'next';
+import { useCallback, useState } from 'react';
 import {
   useAdminStats,
   useRefreshCache,
+  useAdminActivity,
 } from '@gitroom/frontend/hooks/admin/use-admin-stats';
 import { StatsCard, StatsGrid } from '@gitroom/frontend/components/admin/stats-card';
 import { ActivityTimeline } from '@gitroom/frontend/components/admin/activity-timeline';
@@ -14,7 +16,6 @@ import {
   Activity,
   RefreshCw,
 } from 'lucide-react';
-import { useState } from 'react';
 
 /**
  * Admin Dashboard Page
@@ -37,23 +38,26 @@ import { useState } from 'react';
 export default function AdminDashboardPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { data: stats, isLoading, error, refetch } = useAdminStats();
+  const { refetch: refetchActivity } = useAdminActivity(10);
   const refreshCache = useRefreshCache();
 
   /**
    * Handle manual cache refresh
    * Forces recalculation of dashboard statistics
+   * The mutation's onSuccess will invalidate queries and trigger refetch
    */
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
       await refreshCache.mutateAsync(undefined);
-      await refetch();
+      // Also refetch activity timeline
+      refetchActivity();
     } catch {
       // Error handling is done by the mutation
     } finally {
       setIsRefreshing(false);
     }
-  };
+  }, [refreshCache, refetchActivity]);
 
   /**
    * Format number for display (adds commas)
@@ -93,6 +97,8 @@ export default function AdminDashboardPage() {
         <button
           onClick={handleRefresh}
           disabled={isRefreshing || isLoading}
+          aria-label="Refresh dashboard statistics"
+          aria-busy={isRefreshing}
           className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           <RefreshCw
@@ -104,12 +110,17 @@ export default function AdminDashboardPage() {
 
       {/* Error State */}
       {error && (
-        <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div
+          role="alert"
+          aria-live="polite"
+          className="mb-8 p-4 bg-red-50 border border-red-200 rounded-lg"
+        >
           <p className="text-red-800">
             Failed to load dashboard stats.{' '}
             <button
               onClick={() => refetch()}
               className="underline font-medium hover:text-red-900"
+              aria-label="Retry loading dashboard statistics"
             >
               Try again
             </button>
@@ -255,7 +266,7 @@ export default function AdminDashboardPage() {
 
         {/* Activity Timeline - Takes 1 column */}
         <div className="lg:col-span-1">
-          <ActivityTimeline limit={10} />
+          <ActivityTimeline limit={10} onRetry={refetchActivity} />
         </div>
       </div>
     </div>

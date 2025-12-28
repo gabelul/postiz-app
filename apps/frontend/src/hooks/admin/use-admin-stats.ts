@@ -3,6 +3,7 @@
 import {
   useMutation,
   useQuery,
+  useQueryClient,
   type UseMutationOptions,
   type UseQueryOptions,
 } from '@tanstack/react-query';
@@ -183,6 +184,7 @@ export function useRefreshCache(
   >
 ) {
   const fetch = useFetch();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationKey: ['admin', 'stats', 'refresh'],
@@ -196,6 +198,8 @@ export function useRefreshCache(
     },
     onSuccess: (...args) => {
       // Invalidate dashboard query to fetch fresh data
+      queryClient.invalidateQueries({ queryKey: adminStatsKeys.dashboard() });
+      queryClient.invalidateQueries({ queryKey: adminStatsKeys.quick() });
       options?.onSuccess?.(...args);
     },
     ...options,
