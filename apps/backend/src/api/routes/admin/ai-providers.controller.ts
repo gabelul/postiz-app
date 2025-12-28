@@ -17,6 +17,7 @@ import { User } from '@prisma/client';
 import { AIProvidersService } from '@gitroom/backend/services/ai/ai-providers.service';
 import { GetOrgFromRequest } from '@gitroom/nestjs-libraries/user/org.from.request';
 import { Organization } from '@prisma/client';
+import { Throttle } from '@nestjs/throttler';
 
 /**
  * Admin AI Providers Controller
@@ -46,6 +47,7 @@ export class AdminAIProvidersController {
     description: 'Returns all AI providers configured for the organization',
   })
   @ApiResponse({ status: 200, description: 'List of AI providers' })
+  @Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 requests per minute
   async getProviders(@GetOrgFromRequest() org: Organization) {
     return this._aiProvidersService.getProviders(org.id);
   }
@@ -62,6 +64,7 @@ export class AdminAIProvidersController {
     description: 'Returns details of a specific AI provider',
   })
   @ApiResponse({ status: 200, description: 'AI provider details' })
+  @Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 requests per minute
   async getProvider(
     @GetOrgFromRequest() org: Organization,
     @Param('id') id: string
@@ -82,6 +85,7 @@ export class AdminAIProvidersController {
     description: 'Creates a new AI provider with the given configuration',
   })
   @ApiResponse({ status: 201, description: 'Provider created successfully' })
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   async createProvider(
     @GetOrgFromRequest() org: Organization,
     @Body()
@@ -114,6 +118,7 @@ export class AdminAIProvidersController {
     description: 'Updates an existing AI provider configuration',
   })
   @ApiResponse({ status: 200, description: 'Provider updated successfully' })
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   async updateProvider(
     @GetOrgFromRequest() org: Organization,
     @Param('id') id: string,
@@ -142,6 +147,7 @@ export class AdminAIProvidersController {
     description: 'Soft deletes an AI provider',
   })
   @ApiResponse({ status: 200, description: 'Provider deleted successfully' })
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   async deleteProvider(
     @GetOrgFromRequest() org: Organization,
     @Param('id') id: string
@@ -165,6 +171,7 @@ export class AdminAIProvidersController {
     description: 'Tests the AI provider configuration by making an API call',
   })
   @ApiResponse({ status: 200, description: 'Test result' })
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 requests per minute (external API)
   async testProvider(
     @GetOrgFromRequest() org: Organization,
     @Param('id') id: string
@@ -184,6 +191,7 @@ export class AdminAIProvidersController {
     description: 'Fetches available models from the provider API',
   })
   @ApiResponse({ status: 200, description: 'Discovered models' })
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 requests per minute (external API)
   async discoverModels(
     @GetOrgFromRequest() org: Organization,
     @Param('id') id: string
@@ -203,6 +211,7 @@ export class AdminAIProvidersController {
     description: 'Sets this provider as the default for its type',
   })
   @ApiResponse({ status: 200, description: 'Provider set as default' })
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   async setDefault(
     @GetOrgFromRequest() org: Organization,
     @Param('id') id: string

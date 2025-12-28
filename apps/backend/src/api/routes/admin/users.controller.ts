@@ -85,6 +85,7 @@ export class AdminUsersController {
       },
     },
   })
+  @Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 requests per minute
   async listUsers(
     @Query('take') take: string = '50',
     @Query('skip') skip: string = '0',
@@ -152,6 +153,7 @@ export class AdminUsersController {
     summary: 'Get user details',
     description: 'Retrieve detailed information about a specific user',
   })
+  @Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 requests per minute
   async getUser(@Param('userId') userId: string) {
     // Fetch user with all related data, excluding sensitive fields like password
     const user = await this._prismaService.user.findUnique({
@@ -348,6 +350,7 @@ export class AdminUsersController {
     summary: 'Set custom user quotas',
     description: 'Override system quotas for a specific user',
   })
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   async setUserQuotas(
     @Param('userId') userId: string,
     @Body() body: Record<string, any>
@@ -404,6 +407,7 @@ export class AdminUsersController {
     summary: 'Reset user quotas to system defaults',
     description: 'Remove custom quotas and revert to system-wide quotas',
   })
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   async resetUserQuotas(@Param('userId') userId: string) {
     // Fetch user to verify existence
     const user = await this._prismaService.user.findUnique({

@@ -967,6 +967,75 @@ model SystemSettings {
   @@index([createdAt])
 }
 
+/**
+ * Admin Audit Log
+ * Tracks all admin actions for accountability and security auditing.
+ * Logs mutating actions (POST/PUT/PATCH/DELETE) with before/after state.
+ */
+model AdminAuditLog {
+  id         String   @id @default(uuid())
+  action     String   // USER_PROMOTE, USER_DEMOTE, ORG_TIER_CHANGE, SETTING_UPDATE, etc.
+  entityType String   // USER, ORGANIZATION, SETTING, AI_PROVIDER, etc.
+  entityId   String   // ID of the affected entity
+  adminId    String   // ID of the admin who performed the action
+  adminEmail String   // Email of the admin for easy reading
+  changes    String?  // JSON string of before/after values
+  ipAddress  String?  // IP address of the request
+  userAgent  String?  // User agent of the browser/client
+  createdAt  DateTime @default(now())
+
+  @@index([action])
+  @@index([adminId])
+  @@index([entityType, entityId])
+  @@index([createdAt(sort: Desc)])
+}
+
+/**
+ * Admin Webhook
+ * Webhook configuration for admin event notifications.
+ * Allows external systems to receive admin action events.
+ */
+model AdminWebhook {
+  id          String   @id @default(uuid())
+  name        String   // Display name for the webhook
+  url         String   // Webhook URL to send events to
+  events      String   // JSON array of event types to subscribe to
+  enabled     Boolean  @default(true)
+  secret      String?  // Webhook secret for signature verification
+  lastTrigger DateTime? // Last time this webhook was triggered
+  lastStatus  String?  // Last HTTP status code received
+  lastError   String?  // Last error message (if failed)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([enabled])
+  @@index([createdAt])
+}
+
+/**
+ * Maintenance Task
+ * Scheduled maintenance tasks for background jobs.
+ * Used for cleanup, data maintenance, and periodic operations.
+ */
+model MaintenanceTask {
+  id           String   @id @default(uuid())
+  name         String   @unique // Unique identifier for the task
+  displayName  String   // Human-readable name
+  description  String?  // Description of what the task does
+  cronSchedule String   // Cron expression for scheduling
+  enabled      Boolean  @default(true)
+  lastRun      DateTime? // Last time the task was run
+  nextRun      DateTime? // Next scheduled run time
+  lastStatus   String?  // SUCCESS, FAILED, or null
+  lastError    String?  // Last error message (if failed)
+  config       String?  // JSON string for task-specific configuration
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([enabled])
+  @@index([nextRun])
+}
+
 enum Role {
   SUPERADMIN
   ADMIN

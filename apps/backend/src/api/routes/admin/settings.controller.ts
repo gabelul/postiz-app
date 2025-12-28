@@ -16,6 +16,7 @@ import { PrismaService } from '@gitroom/nestjs-libraries/database/prisma/prisma.
 import { GetUserFromRequest } from '@gitroom/nestjs-libraries/user/user.from.request';
 import { User } from '@prisma/client';
 import { safeJsonParse } from '@gitroom/nestjs-libraries/utils';
+import { Throttle } from '@nestjs/throttler';
 
 /**
  * Admin Settings Controller
@@ -52,6 +53,7 @@ export class AdminSettingsController {
     summary: 'Get all system settings',
     description: 'Retrieve all system-wide configuration values',
   })
+  @Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 requests per minute
   async getSystemSettings() {
     const settings = await this._prismaService.systemSettings.findMany({
       orderBy: { key: 'asc' },
@@ -82,6 +84,7 @@ export class AdminSettingsController {
     summary: 'Get specific system setting',
     description: 'Retrieve a specific system setting by key',
   })
+  @Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 requests per minute
   async getSystemSetting(@Param('key') key: string) {
     const setting = await this._prismaService.systemSettings.findUnique({
       where: { key },
@@ -105,6 +108,7 @@ export class AdminSettingsController {
    * }
    */
   @Post('/system')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   async createSystemSetting(
     @Body() body: { key: string; value: string; description?: string },
     @GetUserFromRequest() user: User
@@ -144,6 +148,7 @@ export class AdminSettingsController {
    * @returns The updated setting
    */
   @Put('/system/:key')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   async updateSystemSetting(
     @Param('key') key: string,
     @Body() body: { value: string; description?: string },
@@ -180,6 +185,7 @@ export class AdminSettingsController {
    * @returns Success response
    */
   @Delete('/system/:key')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   async deleteSystemSetting(@Param('key') key: string) {
     const setting = await this._prismaService.systemSettings.findUnique({
       where: { key },
@@ -212,6 +218,7 @@ export class AdminSettingsController {
     summary: 'Get tier definitions',
     description: 'Retrieve current subscription tier features and limits',
   })
+  @Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 requests per minute
   async getTiers() {
     // For now, return hardcoded tiers from pricing.ts
     // In a full implementation, these would be stored in database
@@ -315,6 +322,7 @@ export class AdminSettingsController {
    * }
    */
   @Put('/tiers/:tier')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   async updateTier(
     @Param('tier') tier: string,
     @Body() body: Record<string, any>,
@@ -358,6 +366,7 @@ export class AdminSettingsController {
    * @returns Success response
    */
   @Post('/tiers/:tier/reset')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   async resetTier(@Param('tier') tier: string) {
     // Validate tier name
     const validTiers = ['FREE', 'STANDARD', 'PRO', 'TEAM', 'ULTIMATE'];
@@ -390,6 +399,7 @@ export class AdminSettingsController {
     summary: 'Get global AI providers',
     description: 'Retrieve globally configured AI providers available to all organizations',
   })
+  @Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 requests per minute
   async getGlobalAiProviders() {
     const providers = await this._prismaService.systemSettings.findMany({
       where: {
@@ -428,6 +438,7 @@ export class AdminSettingsController {
    * }
    */
   @Post('/ai-providers/global/:provider')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   async configureGlobalAiProvider(
     @Param('provider') provider: string,
     @Body() body: Record<string, any>,
@@ -469,6 +480,7 @@ export class AdminSettingsController {
     summary: 'Get feature flags',
     description: 'Retrieve all system feature toggles',
   })
+  @Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 requests per minute
   async getFeatures() {
     const flags = await this._prismaService.systemSettings.findMany({
       where: {
@@ -499,6 +511,7 @@ export class AdminSettingsController {
    * { "enabled": false }
    */
   @Post('/features/:feature')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   async toggleFeature(
     @Param('feature') feature: string,
     @Body() body: { enabled: boolean },

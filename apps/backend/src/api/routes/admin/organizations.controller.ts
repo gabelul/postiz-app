@@ -17,6 +17,7 @@ import { PrismaService } from '@gitroom/nestjs-libraries/database/prisma/prisma.
 import type { $Enums } from '@prisma/client';
 import { safeJsonParse } from '@gitroom/nestjs-libraries/utils';
 import { PaginationWithSearchDto } from './dto';
+import { Throttle } from '@nestjs/throttler';
 
 /**
  * Admin Organizations Controller
@@ -56,6 +57,7 @@ export class AdminOrganizationsController {
     summary: 'List all organizations',
     description: 'Returns paginated list of all organizations in system',
   })
+  @Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 requests per minute
   async listOrganizations(@Query() query: PaginationWithSearchDto) {
     // Validate and parse pagination parameters
     const takeNum = Math.min(parseInt(query.take) || 50, 500);
@@ -141,6 +143,7 @@ export class AdminOrganizationsController {
     summary: 'Get organization details',
     description: 'Retrieve detailed information about a specific organization',
   })
+  @Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 requests per minute
   async getOrganization(@Param('orgId') orgId: string) {
     const organization = await this._prismaService.organization.findUnique({
       where: { id: orgId },
@@ -226,6 +229,7 @@ export class AdminOrganizationsController {
     summary: 'Force set subscription tier',
     description: 'Admin can directly set subscription tier without payment',
   })
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   async setSubscriptionTier(
     @Param('orgId') orgId: string,
     @Body() body: { tier: string }
@@ -298,6 +302,7 @@ export class AdminOrganizationsController {
     summary: 'Enable/disable billing bypass',
     description: 'Allow organization to bypass billing checks',
   })
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   async setBypassBilling(
     @Param('orgId') orgId: string,
     @Body() body: { bypass: boolean }
@@ -356,6 +361,7 @@ export class AdminOrganizationsController {
     summary: 'Set custom organization limits',
     description: 'Override system limits for a specific organization',
   })
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   async setCustomLimits(
     @Param('orgId') orgId: string,
     @Body() body: Record<string, any>
@@ -410,6 +416,7 @@ export class AdminOrganizationsController {
     summary: 'Reset organization limits to system defaults',
     description: 'Remove custom limits and revert to system-wide limits',
   })
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   async resetCustomLimits(@Param('orgId') orgId: string) {
     // Fetch organization to verify it exists
     const org = await this._prismaService.organization.findUnique({
@@ -454,6 +461,7 @@ export class AdminOrganizationsController {
     summary: 'Make organization unlimited',
     description: 'Set all limits to maximum and bypass billing',
   })
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   async makeUnlimited(@Param('orgId') orgId: string) {
     // Fetch organization to verify it exists
     const org = await this._prismaService.organization.findUnique({
