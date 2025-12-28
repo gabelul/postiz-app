@@ -39,8 +39,10 @@ import { AdminOrganizationsController } from '@gitroom/backend/api/routes/admin/
 import { AdminSettingsController } from '@gitroom/backend/api/routes/admin/settings.controller';
 import { AdminAIProvidersController } from '@gitroom/backend/api/routes/admin/ai-providers.controller';
 import { AdminDashboardController } from '@gitroom/backend/api/routes/admin/dashboard.controller';
+import { AdminEmailSettingsController } from '@gitroom/backend/api/routes/admin/email-settings.controller';
 import { AIProvidersService } from '@gitroom/backend/services/ai/ai-providers.service';
 import { AdminDashboardService } from '@gitroom/backend/services/admin/admin-dashboard.service';
+import { EncryptedSettingsService } from '@gitroom/backend/services/admin/encrypted-settings.service';
 
 const authenticatedController = [
   UsersController,
@@ -75,6 +77,7 @@ const authenticatedController = [
     AdminSettingsController,
     AdminAIProvidersController,
     AdminDashboardController,
+    AdminEmailSettingsController,
     ...authenticatedController,
   ],
   providers: [
@@ -92,6 +95,7 @@ const authenticatedController = [
     Nowpayments,
     AIProvidersService,
     AdminDashboardService,
+    EncryptedSettingsService,
   ],
   get exports() {
     return [...this.imports, ...this.providers];
@@ -107,7 +111,8 @@ export class ApiModule implements NestModule {
       AdminOrganizationsController,
       AdminSettingsController,
       AdminAIProvidersController,
-      AdminDashboardController
+      AdminDashboardController,
+      AdminEmailSettingsController
     );
   }
 }
