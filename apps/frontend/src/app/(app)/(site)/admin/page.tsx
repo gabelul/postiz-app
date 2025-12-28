@@ -15,6 +15,7 @@ import {
   CreditCard,
   Activity,
   RefreshCw,
+  Layers,
 } from 'lucide-react';
 
 /**
@@ -260,6 +261,22 @@ export default function AdminDashboardPage() {
             </p>
             <div className="mt-3 text-xs text-red-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
               Configure Storage →
+            </div>
+          </a>
+
+          <a
+            href="/admin/bulk-operations"
+            className="block p-6 bg-indigo-50 border-l-4 border-indigo-500 rounded-lg hover:bg-indigo-100 transition-colors group"
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <Layers className="w-5 h-5 text-indigo-600" />
+              <h3 className="font-bold text-indigo-900">Bulk Operations</h3>
+            </div>
+            <p className="text-sm text-indigo-700">
+              CSV import/export, bulk promote/demote, bulk tier changes
+            </p>
+            <div className="mt-3 text-xs text-indigo-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+              Bulk Actions →
             </div>
           </a>
         </div>

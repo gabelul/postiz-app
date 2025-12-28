@@ -18,7 +18,8 @@
       "Bash(find:*)",
       "Bash(npm run type-check:*)",
       "Bash(cat:*)",
-      "Bash(pnpm --filter postiz-frontend run build:*)"
+      "Bash(pnpm --filter postiz-frontend run build:*)",
+      "mcp__zen__codereview"
     ],
     "deny": [],
     "ask": []

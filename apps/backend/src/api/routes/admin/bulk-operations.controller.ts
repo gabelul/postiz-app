@@ -14,7 +14,6 @@ import { GetUserFromRequest } from '@gitroom/nestjs-libraries/user/user.from.req
 import { User } from '@prisma/client';
 import { BulkOperationsService } from '@gitroom/backend/services/admin/bulk-operations.service';
 import { Throttle } from '@nestjs/throttler';
-import { safeJsonParse } from '@gitroom/nestjs-libraries/utils';
 import type {
   BulkOperationResult,
   BulkUserOperationRequest,

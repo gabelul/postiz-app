@@ -623,6 +623,13 @@ export class BulkOperationsService {
     return values
       .map((v) => {
         const str = String(v ?? '');
+
+        // Prevent CSV injection: escape values that start with formula characters
+        // These characters can cause Excel/LibreOffice to interpret the value as a formula
+        if (str.startsWith('=') || str.startsWith('+') || str.startsWith('-') || str.startsWith('@')) {
+          return `'${str}`; // Prefix with single quote to force text interpretation
+        }
+
         // Quote if contains comma, quote, or newline
         if (str.includes(',') || str.includes('"') || str.includes('\n')) {
           return `"${str.replace(/"/g, '""')}"`;
