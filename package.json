@@ -7,7 +7,7 @@
   "keywords": [],
   "author": "",
   "engines": {
-    "node": ">=22.0.0 <23.0.0"
+    "node": ">=22.12.0 <23.0.0"
   },
   "packageManager": "pnpm@10.6.1",
   "scripts": {
@@ -34,9 +34,10 @@
     "commands:build:development": "pnpm --filter ./apps/commands run build",
     "workers": "rm -rf dist/workers && pnpm --filter ./apps/workers run dev",
     "cron": "rm -rf dist/cron && pnpm --filter ./apps/cron run dev",
-    "prisma-generate": "pnpm dlx prisma generate --schema ./libraries/nestjs-libraries/src/database/prisma/schema.prisma",
-    "prisma-db-push": "pnpm dlx prisma db push --schema ./libraries/nestjs-libraries/src/database/prisma/schema.prisma",
-    "prisma-reset": "cd ./libraries/nestjs-libraries/src/database/prisma && pnpm dlx prisma db push --force-reset && npx prisma db push",
+    "prisma-generate": "pnpm dlx prisma@6.5.0 generate --schema ./libraries/nestjs-libraries/src/database/prisma/schema.prisma",
+    "prisma-db-push": "pnpm dlx prisma@6.5.0 db push --schema ./libraries/nestjs-libraries/src/database/prisma/schema.prisma",
+    "prisma-db-pull": "pnpm dlx prisma@6.5.0 db pull --schema ./libraries/nestjs-libraries/src/database/prisma/schema.prisma",
+    "prisma-reset": "cd ./libraries/nestjs-libraries/src/database/prisma && pnpm dlx prisma@6.5.0 db push --force-reset && pnpx prisma@6.5.0 db push",
     "docker-build": "./var/docker/docker-build.sh",
     "docker-create": "./var/docker/docker-create.sh",
     "postinstall": "pnpm run prisma-generate",
@@ -74,7 +75,7 @@
     "@mastra/mcp": "^0.14.1",
     "@mastra/memory": "^0.15.6",
     "@mastra/pg": "^0.17.2",
-    "@modelcontextprotocol/sdk": "^1.9.0",
+    "@modelcontextprotocol/sdk": "^1.22.0",
     "@nestjs/cli": "10.0.2",
     "@nestjs/common": "^10.0.2",
     "@nestjs/core": "^10.0.2",
@@ -83,16 +84,20 @@
     "@nestjs/schedule": "^4.0.0",
     "@nestjs/swagger": "^7.3.0",
     "@nestjs/throttler": "^6.3.0",
-    "@neynar/nodejs-sdk": "^2.8.1",
+    "@neynar/nodejs-sdk": "^3.112.0",
     "@neynar/react": "^0.9.7",
+    "@pigment-css/react": "^0.0.30",
     "@postiz/wallets": "^0.0.1",
-    "@prisma/client": "^6.5.0",
-    "@sentry/nestjs": "^10.12.0",
-    "@sentry/nextjs": "^10.12.0",
-    "@sentry/profiling-node": "^10.12.0",
+    "@prisma/client": "6.5.0",
+    "@sentry/nestjs": "^10.26.0",
+    "@sentry/nextjs": "^10.26.0",
+    "@sentry/profiling-node": "^10.25.0",
+    "@sentry/react": "^10.25.0",
     "@solana/web3.js": "^1.95.0",
     "@solana/wallet-adapter-react": "^0.15.35",
     "@solana/wallet-adapter-react-ui": "^0.9.35",
+    "@stripe/react-stripe-js": "^5.4.1",
+    "@stripe/stripe-js": "^8.6.0",
     "@swc/helpers": "0.5.13",
     "@sweetalert2/theme-dark": "^5.0.16",
     "@tailwindcss/postcss": "^4.1.7",
@@ -188,12 +193,12 @@
     "music-metadata": "^7.14.0",
     "nestjs-command": "^3.1.4",
     "nestjs-real-ip": "^3.0.1",
-    "next": "^14.2.30",
+    "next": "14.2.35",
     "next-plausible": "^3.12.0",
     "node-fetch": "^3.3.2",
     "node-telegram-bot-api": "^0.66.0",
-    "nodemailer": "^6.9.15",
-    "nostr-tools": "^2.10.4",
+    "nodemailer": "^7.0.11",
+    "nostr-tools": "^2.18.2",
     "openai": "^6.2.0",
     "p-limit": "^3.1.0",
     "parse5": "^6.0.1",
@@ -304,7 +309,7 @@
     "nodemon": "^3.1.9",
     "postcss": "8.4.38",
     "prettier": "^2.6.2",
-    "prisma": "^6.5.0",
+    "prisma": "6.5.0",
     "react-refresh": "^0.10.0",
     "ts-jest": "^29.1.0",
     "ts-node": "10.9.2",
@@ -322,6 +327,9 @@
     "outputName": "junit.xml"
   },
   "pnpm": {
+    "overrides": {
+      "next": "14.2.35"
+    },
     "onlyBuiltDependencies": [
       "bcrypt"
     ]

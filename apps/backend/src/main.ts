@@ -17,7 +17,7 @@ import { ConfigurationChecker } from '@gitroom/helpers/configuration/configurati
 import { startMcp } from '@gitroom/nestjs-libraries/chat/start.mcp';
 import { BillingBypassInterceptor } from '@gitroom/nestjs-libraries/interceptors/billing-bypass.interceptor';
 
-async function bootstrap() {
+async function start() {
   const app = await NestFactory.create(AppModule, {
     rawBody: true,
     cors: {
@@ -84,8 +84,8 @@ function checkConfiguration() {
 
     Logger.warn('Configuration issues found: ' + checker.getIssuesCount());
   } else {
-    Logger.log('Configuration check completed without any issues.');
+    Logger.log('Configuration check completed without any issues');
   }
 }
 
-bootstrap();
+start();
