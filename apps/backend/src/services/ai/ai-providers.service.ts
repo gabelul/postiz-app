@@ -5,6 +5,14 @@ import { AIProvider, Prisma } from '@prisma/client';
 import OpenAI from 'openai';
 
 /**
+ * AI Provider with decrypted API key for internal use
+ * Extends AIProvider but explicitly marks apiKey as decrypted string
+ */
+interface DecryptedAIProvider extends Omit<AIProvider, 'apiKey'> {
+  apiKey: string; // decrypted API key
+}
+
+/**
  * AI Providers Service
  *
  * Manages AI provider configurations including:
@@ -74,7 +82,7 @@ export class AIProvidersService {
   async getProviderInternal(
     organizationId: string,
     providerId: string
-  ): Promise<AIProvider & { apiKey: string }> {
+  ): Promise<DecryptedAIProvider> {
     const provider = await this._prismaService.aIProvider.findFirst({
       where: {
         id: providerId,
@@ -87,11 +95,19 @@ export class AIProvidersService {
       throw new NotFoundException(`AI provider with ID ${providerId} not found`);
     }
 
-    // Decrypt API key for internal use
-    return {
-      ...provider,
-      apiKey: AuthService.fixedDecryption(provider.apiKey),
-    };
+    // Decrypt API key for internal use with error handling
+    try {
+      const decryptedKey = AuthService.fixedDecryption(provider.apiKey);
+      return {
+        ...provider,
+        apiKey: decryptedKey,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to decrypt API key for provider ${providerId}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+      throw new Error('Failed to decrypt provider API key. The key may be corrupted.');
+    }
   }
 
   /**
@@ -110,8 +126,16 @@ export class AIProvidersService {
       customConfig?: string;
     }
   ): Promise<AIProvider> {
-    // Encrypt API key before storing
-    const encryptedKey = AuthService.fixedEncryption(data.apiKey);
+    // Encrypt API key before storing with error handling
+    let encryptedKey: string;
+    try {
+      encryptedKey = AuthService.fixedEncryption(data.apiKey);
+    } catch (error) {
+      this.logger.error(
+        `Failed to encrypt API key: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+      throw new Error('Failed to encrypt API key. Check your JWT_SECRET configuration.');
+    }
 
     // If this is the first provider, make it default
     const existingCount = await this._prismaService.aIProvider.count({
@@ -165,9 +189,16 @@ export class AIProvidersService {
     if (data.customConfig !== undefined) updateData.customConfig = data.customConfig;
     if (data.enabled !== undefined) updateData.enabled = data.enabled;
 
-    // Encrypt new API key if provided
+    // Encrypt new API key if provided with error handling
     if (data.apiKey !== undefined) {
-      updateData.apiKey = AuthService.fixedEncryption(data.apiKey);
+      try {
+        updateData.apiKey = AuthService.fixedEncryption(data.apiKey);
+      } catch (error) {
+        this.logger.error(
+          `Failed to encrypt API key: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+        throw new Error('Failed to encrypt API key. Check your JWT_SECRET configuration.');
+      }
     }
 
     const provider = await this._prismaService.aIProvider.update({
@@ -292,6 +323,7 @@ export class AIProvidersService {
 
   /**
    * Set a provider as the default for its type
+   * Uses a transaction to prevent race conditions
    * @param organizationId - Organization ID
    * @param providerId - Provider ID
    * @returns Updated provider
@@ -300,26 +332,39 @@ export class AIProvidersService {
     organizationId: string,
     providerId: string
   ): Promise<AIProvider> {
-    const provider = await this.getProviderInternal(organizationId, providerId);
+    // Use transaction to prevent race condition - ensure only one provider is default at a time
+    return this._prismaService.$transaction(async (tx) => {
+      const provider = await tx.aIProvider.findFirst({
+        where: {
+          id: providerId,
+          organizationId,
+          deletedAt: null,
+        },
+      });
 
-    // Unset isDefault for all providers of the same type
-    await this._prismaService.aIProvider.updateMany({
-      where: {
-        organizationId,
-        type: provider.type,
-        deletedAt: null,
-      },
-      data: { isDefault: false },
+      if (!provider) {
+        throw new NotFoundException(`AI provider with ID ${providerId} not found`);
+      }
+
+      // Unset isDefault for all providers of the same type within the transaction
+      await tx.aIProvider.updateMany({
+        where: {
+          organizationId,
+          type: provider.type,
+          deletedAt: null,
+        },
+        data: { isDefault: false },
+      });
+
+      // Set this provider as default within the same transaction
+      const updated = await tx.aIProvider.update({
+        where: { id: providerId },
+        data: { isDefault: true },
+      });
+
+      this.logger.log(`Set provider ${providerId} as default for type ${provider.type}`);
+      return this.maskApiKey(updated);
     });
-
-    // Set this provider as default
-    const updated = await this._prismaService.aIProvider.update({
-      where: { id: providerId },
-      data: { isDefault: true },
-    });
-
-    this.logger.log(`Set provider ${providerId} as default for type ${provider.type}`);
-    return this.maskApiKey(updated);
   }
 
   /**
@@ -330,7 +375,7 @@ export class AIProvidersService {
   private maskApiKey(provider: AIProvider): AIProvider {
     return {
       ...provider,
-      apiKey: provider.apiKey ? '***' + provider.apiKey.slice(-4) : '',
+      apiKey: provider.apiKey ? '***REDACTED***' : '',
     };
   }
 }
