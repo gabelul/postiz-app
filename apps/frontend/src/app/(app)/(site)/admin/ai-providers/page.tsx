@@ -113,7 +113,7 @@ export default function AdminAIProvidersPage() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch('/api/settings/ai/providers', {
+      const response = await fetch('/api/admin/settings/ai-providers', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -169,8 +169,8 @@ export default function AdminAIProvidersPage() {
 
       const method = editingId ? 'PUT' : 'POST';
       const url = editingId
-        ? `/api/settings/ai/providers/${editingId}`
-        : '/api/settings/ai/providers';
+        ? `/api/admin/settings/ai-providers/${editingId}`
+        : '/api/admin/settings/ai-providers';
 
       const response = await fetch(url, {
         method,
@@ -208,7 +208,7 @@ export default function AdminAIProvidersPage() {
       setError(null);
 
       const response = await fetch(
-        `/api/settings/ai/providers/${providerId}/test`,
+        `/api/admin/settings/ai-providers/${providerId}/test`,
         {
           method: 'POST',
           headers: {
@@ -242,7 +242,7 @@ export default function AdminAIProvidersPage() {
       setError(null);
 
       const response = await fetch(
-        `/api/settings/ai/providers/${providerId}/discover-models`,
+        `/api/admin/settings/ai-providers/${providerId}/discover-models`,
         {
           method: 'POST',
           headers: {
@@ -277,7 +277,7 @@ export default function AdminAIProvidersPage() {
 
     try {
       setError(null);
-      const response = await fetch(`/api/settings/ai/providers/${providerId}`, {
+      const response = await fetch(`/api/admin/settings/ai-providers/${providerId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -305,9 +305,9 @@ export default function AdminAIProvidersPage() {
     try {
       setError(null);
       const response = await fetch(
-        `/api/settings/ai/providers/${providerId}/set-default`,
+        `/api/admin/settings/ai-providers/${providerId}/set-default`,
         {
-          method: 'PUT',
+          method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
