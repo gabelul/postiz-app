@@ -84,11 +84,11 @@ services:
       DB_USER: "postiz-local"
       DB_PASSWORD: ${DB_PASSWORD:-postiz-local-pwd}
       DB_NAME: "postiz-db-local"
-      DATABASE_URL: "postgresql://postiz-local:${DB_PASSWORD:-postiz-local-pwd}@postiz-postgres:5432/postiz-db-local"
+      DATABASE_URL: "postgresql://postiz-local:postiz-local-pwd@postiz-postgres:5432/postiz-db-local"
 
       # === Redis Configuration ===
       # WARNING: Change default password in production!
-      REDIS_URL: "redis://:${REDIS_PASSWORD:-postiz-redis-pwd}@postiz-redis:6379"
+      REDIS_URL: "redis://:postiz-redis-pwd@postiz-redis:6379"
       REDIS_PASSWORD: ${REDIS_PASSWORD:-postiz-redis-pwd}
 
       # === Application Configuration ===
@@ -142,7 +142,7 @@ services:
       MAX_WORKERS: ${MAX_WORKERS:-4}
       STORAGE_PROVIDER: "local"
       UPLOAD_DIRECTORY: "/uploads"
-      DISABLE_MASTRA: ${DISABLE_MASTRA:-false}
+      DISABLE_MASTRA: "true"
 
     # Expose on configurable ports
     # Local testing defaults: Backend 32456, Frontend 4200

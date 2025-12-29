@@ -47,6 +47,7 @@ import { AdminDashboardService } from '@gitroom/backend/services/admin/admin-das
 import { EncryptedSettingsService } from '@gitroom/backend/services/admin/encrypted-settings.service';
 import { AdminEmailService } from '@gitroom/backend/services/admin/admin-email.service';
 import { BulkOperationsService } from '@gitroom/backend/services/admin/bulk-operations.service';
+import { AdminAuditService } from '@gitroom/backend/services/admin/admin-audit.service';
 
 const authenticatedController = [
   UsersController,
@@ -104,6 +105,7 @@ const authenticatedController = [
     EncryptedSettingsService,
     AdminEmailService,
     BulkOperationsService,
+    AdminAuditService,
   ],
   get exports() {
     return [...this.imports, ...this.providers];

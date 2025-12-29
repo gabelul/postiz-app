@@ -1,11 +1,22 @@
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, Logger } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { MastraService } from '@gitroom/nestjs-libraries/chat/mastra.service';
 import { MCPServer } from '@mastra/mcp';
 import { randomUUID } from 'crypto';
 import { OrganizationService } from '@gitroom/nestjs-libraries/database/prisma/organizations/organization.service';
 import { runWithContext } from './async.storage';
+
+/**
+ * Start the MCP (Model Context Protocol) server
+ * Skips initialization if DISABLE_MASTRA is set to true
+ */
 export const startMcp = async (app: INestApplication) => {
+  // Check if Mastra is disabled
+  if (process.env.DISABLE_MASTRA === 'true') {
+    Logger.log('MCP server disabled (DISABLE_MASTRA=true)');
+    return;
+  }
+
   const mastraService = app.get(MastraService, { strict: false });
   const organizationService = app.get(OrganizationService, { strict: false });
 

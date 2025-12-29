@@ -23,7 +23,9 @@
       "Bash(pnpm build:backend)",
       "Bash(pnpm build:frontend:*)",
       "Bash(./test-build.sh:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(./deploy.sh:*)",
+      "Bash(docker compose:*)"
     ],
     "deny": [],
     "ask": []
