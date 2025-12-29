@@ -19,7 +19,11 @@
       "Bash(npm run type-check:*)",
       "Bash(cat:*)",
       "Bash(pnpm --filter postiz-frontend run build:*)",
-      "mcp__zen__codereview"
+      "mcp__zen__codereview",
+      "Bash(pnpm build:backend)",
+      "Bash(pnpm build:frontend:*)",
+      "Bash(./test-build.sh:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

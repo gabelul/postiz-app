@@ -111,6 +111,7 @@
     "@tiptap/extension-paragraph": "^3.0.6",
     "@tiptap/extension-text": "^3.0.6",
     "@tiptap/extension-underline": "^3.0.6",
+    "@tiptap/extensions": "^3.14.0",
     "@tiptap/pm": "^3.0.6",
     "@tiptap/react": "^3.0.6",
     "@tiptap/starter-kit": "^3.0.6",
