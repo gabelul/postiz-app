@@ -1,15 +1,24 @@
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, Logger } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { MastraService } from '@gitroom/nestjs-libraries/chat/mastra.service';
 import { MCPServer } from '@mastra/mcp';
 import { randomUUID } from 'crypto';
 import { OrganizationService } from '@gitroom/nestjs-libraries/database/prisma/organizations/organization.service';
 import { runWithContext } from './async.storage';
+
+/**
+ * Start the MCP (Model Context Protocol) server
+ */
 export const startMcp = async (app: INestApplication) => {
   const mastraService = app.get(MastraService, { strict: false });
   const organizationService = app.get(OrganizationService, { strict: false });
 
   const mastra = await mastraService.mastra();
+  if (!mastra) {
+    Logger.log('MCP server disabled (Mastra not available)');
+    return;
+  }
+
   const agent = mastra.getAgent('postiz');
   const tools = await agent.getTools();
 

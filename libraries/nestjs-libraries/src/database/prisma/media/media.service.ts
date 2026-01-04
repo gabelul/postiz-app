@@ -42,10 +42,9 @@ export class MediaService {
       'ai_images',
       async () => {
         if (generatePromptFirst) {
-          prompt = await this._openAi.generatePromptForPicture(prompt);
-          console.log('Prompt:', prompt);
+          prompt = await this._openAi.generatePromptForPicture(prompt, org.id);
         }
-        return this._openAi.generateImage(prompt, !!generatePromptFirst);
+        return this._openAi.generateImage(prompt, !!generatePromptFirst, false, org.id);
       }
     );
 
@@ -103,9 +102,7 @@ export class MediaService {
       throw new HttpException('This video is not available in trial mode', 406);
     }
 
-    console.log(body.customParams);
     await video.instance.processAndValidate(body.customParams);
-    console.log('no err');
 
     return await this._subscriptionService.useCredit(
       org,
@@ -113,7 +110,8 @@ export class MediaService {
       async () => {
         const loadedData = await video.instance.process(
           body.output,
-          body.customParams
+          body.customParams,
+          org.id
         );
 
         const file = await this.storage.uploadSimple(loadedData);

@@ -34,6 +34,22 @@ import { AutopostController } from '@gitroom/backend/api/routes/autopost.control
 import { SetsController } from '@gitroom/backend/api/routes/sets.controller';
 import { ThirdPartyController } from '@gitroom/backend/api/routes/third-party.controller';
 import { MonitorController } from '@gitroom/backend/api/routes/monitor.controller';
+import { AdminUsersController } from '@gitroom/backend/api/routes/admin/users.controller';
+import { AdminOrganizationsController } from '@gitroom/backend/api/routes/admin/organizations.controller';
+import { AdminSettingsController } from '@gitroom/backend/api/routes/admin/settings.controller';
+import { AdminAIProvidersController } from '@gitroom/backend/api/routes/admin/ai-providers.controller';
+import { AdminAITasksController } from '@gitroom/backend/api/routes/admin/ai-tasks.controller';
+import { AdminDashboardController } from '@gitroom/backend/api/routes/admin/dashboard.controller';
+import { AdminEmailSettingsController } from '@gitroom/backend/api/routes/admin/email-settings.controller';
+import { BulkOperationsController } from '@gitroom/backend/api/routes/admin/bulk-operations.controller';
+import { AdminHealthController } from '@gitroom/backend/api/routes/admin/health.controller';
+import { AIProvidersService } from '@gitroom/backend/services/ai/ai-providers.service';
+import { AdminDashboardService } from '@gitroom/backend/services/admin/admin-dashboard.service';
+import { EncryptedSettingsService } from '@gitroom/backend/services/admin/encrypted-settings.service';
+import { AdminEmailService } from '@gitroom/backend/services/admin/admin-email.service';
+import { BulkOperationsService } from '@gitroom/backend/services/admin/bulk-operations.service';
+import { AdminAuditService } from '@gitroom/backend/services/admin/admin-audit.service';
+import { ChatModule } from '@gitroom/nestjs-libraries/chat/chat.module';
 
 const authenticatedController = [
   UsersController,
@@ -55,13 +71,23 @@ const authenticatedController = [
   ThirdPartyController,
 ];
 @Module({
-  imports: [UploadModule],
+  imports: [UploadModule, ChatModule],
   controllers: [
     RootController,
     StripeController,
     AuthController,
     PublicController,
     MonitorController,
+    // Admin Controllers - Require superAdmin privileges
+    AdminUsersController,
+    AdminOrganizationsController,
+    AdminSettingsController,
+    AdminAIProvidersController,
+    AdminAITasksController,
+    AdminDashboardController,
+    AdminEmailSettingsController,
+    BulkOperationsController,
+    AdminHealthController,
     ...authenticatedController,
   ],
   providers: [
@@ -77,6 +103,12 @@ const authenticatedController = [
     TrackService,
     ShortLinkService,
     Nowpayments,
+    AIProvidersService,
+    AdminDashboardService,
+    EncryptedSettingsService,
+    AdminEmailService,
+    BulkOperationsService,
+    AdminAuditService,
   ],
   get exports() {
     return [...this.imports, ...this.providers];
@@ -84,6 +116,19 @@ const authenticatedController = [
 })
 export class ApiModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(AuthMiddleware).forRoutes(...authenticatedController);
+    // Apply AuthMiddleware to all authenticated controllers AND admin controllers
+    // Admin controllers need request.user populated for AdminGuard to work
+    consumer.apply(AuthMiddleware).forRoutes(
+      ...authenticatedController,
+      AdminUsersController,
+      AdminOrganizationsController,
+      AdminSettingsController,
+      AdminAIProvidersController,
+      AdminAITasksController,
+      AdminDashboardController,
+      AdminEmailSettingsController,
+      BulkOperationsController,
+      AdminHealthController
+    );
   }
 }

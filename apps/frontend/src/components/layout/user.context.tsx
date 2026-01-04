@@ -15,6 +15,13 @@ export const UserContext = createContext<
       role: 'USER' | 'ADMIN' | 'SUPERADMIN';
       totalChannels: number;
       isLifetime?: boolean;
+      /**
+       * System superAdmin status - true when user.isSuperAdmin is true in database
+       * This is distinct from organization role (role field) which represents
+       * organization membership permissions. System superAdmins have access
+       * to admin panel regardless of their organization role.
+       */
+      admin: boolean;
       impersonate: boolean;
       allowTrial: boolean;
       isTrailing: boolean;
@@ -27,6 +34,7 @@ export const ContextWrapper: FC<{
     role: 'USER' | 'ADMIN' | 'SUPERADMIN';
     publicApi: string;
     totalChannels: number;
+    admin: boolean;
   };
   children: ReactNode;
 }> = ({ user, children }) => {

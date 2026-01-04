@@ -1,7 +1,37 @@
 {
   "permissions": {
     "allow": [
-      "Skill(ctxk:impl:commit-changes)"
-    ]
-  }
+      "mcp__fetch-server__fetch",
+      "Bash(bash test-build.sh:*)",
+      "Bash(tee:*)",
+      "Read(//private/tmp/postiz-public/**)",
+      "Bash(docker build:*)",
+      "Bash(docker-compose:*)",
+      "Bash(docker exec:*)",
+      "Bash(xargs cat:*)",
+      "Bash(curl:*)",
+      "Bash(ls:*)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm run prisma-generate:*)",
+      "mcp__zen__clink",
+      "Bash(find:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(cat:*)",
+      "Bash(pnpm --filter postiz-frontend run build:*)",
+      "mcp__zen__codereview",
+      "Bash(pnpm build:backend)",
+      "Bash(pnpm build:frontend:*)",
+      "Bash(./test-build.sh:*)",
+      "Bash(grep:*)",
+      "Bash(./deploy.sh:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker logs:*)"
+    ],
+    "deny": [],
+    "ask": []
+  },
+  "disabledMcpjsonServers": [
+    "browser-server"
+  ]
 }

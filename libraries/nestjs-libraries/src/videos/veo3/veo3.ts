@@ -37,9 +37,17 @@ class Veo3Params {
 })
 export class Veo3 extends VideoAbstract<Veo3Params> {
   override dto = Veo3Params;
+  /**
+   * Process video generation with Veo3
+   * @param output - Video orientation (vertical or horizontal)
+   * @param customParams - Video generation parameters
+   * @param _organizationId - Organization ID (unused, kept for interface compatibility)
+   * @returns URL of the generated video
+   */
   async process(
     output: 'vertical' | 'horizontal',
-    customParams: Veo3Params
+    customParams: Veo3Params,
+    _organizationId?: string
   ): Promise<URL> {
     const value = await (
       await fetch('https://api.kie.ai/api/v1/veo/generate', {

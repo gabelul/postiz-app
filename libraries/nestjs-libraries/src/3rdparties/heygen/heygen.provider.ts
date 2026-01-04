@@ -47,9 +47,23 @@ export class HeygenProvider extends ThirdPartyAbstract<{
     };
   }
 
-  async generateVoice(apiKey: string, data: { text: string }) {
+  /**
+   * Generate voice text from input text using AI
+   * @param apiKey - HeyGen API key (unused, kept for interface consistency)
+   * @param data - Input data containing text to convert
+   * @param organizationId - Organization ID for AI provider selection
+   * @returns Voice text generated from input
+   */
+  async generateVoice(
+    apiKey: string,
+    data: { text: string },
+    organizationId?: string
+  ) {
     return {
-      voice: await this._openaiService.generateVoiceFromText(data.text),
+      voice: await this._openaiService.generateVoiceFromText(
+        data.text,
+        organizationId
+      ),
     };
   }
 
@@ -108,6 +122,13 @@ export class HeygenProvider extends ThirdPartyAbstract<{
     return loadedAvatars;
   }
 
+  /**
+   * Send data to HeyGen to generate a video
+   * @param apiKey - HeyGen API key
+   * @param data - Video generation parameters
+   * @param _organizationId - Organization ID (unused, kept for interface compatibility)
+   * @returns URL of the generated video
+   */
   async sendData(
     apiKey: string,
     data: {
@@ -117,7 +138,8 @@ export class HeygenProvider extends ThirdPartyAbstract<{
       captions: string;
       selectedVoice: string;
       type: 'talking_photo' | 'avatar';
-    }
+    },
+    _organizationId?: string
   ): Promise<string> {
     const {
       data: { video_id },

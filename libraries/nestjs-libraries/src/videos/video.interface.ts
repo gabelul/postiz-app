@@ -22,7 +22,8 @@ export abstract class VideoAbstract<T> {
 
   abstract process(
     output: 'vertical' | 'horizontal',
-    customParams?: T
+    customParams?: T,
+    organizationId?: string // Optional organization ID for AI provider selection
   ): Promise<URL>;
 }
 

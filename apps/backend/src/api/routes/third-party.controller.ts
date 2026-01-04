@@ -84,7 +84,8 @@ export class ThirdPartyController {
 
     const loadedData = await thirdPartyInstance?.instance?.sendData(
       AuthService.fixedDecryption(thirdParty.apiKey),
-      data
+      data,
+      organization.id
     );
 
     const file = await this.storage.uploadSimple(loadedData);
@@ -117,7 +118,8 @@ export class ThirdPartyController {
 
     return thirdPartyInstance?.instance?.[functionName](
       AuthService.fixedDecryption(thirdParty.apiKey),
-      data
+      data,
+      organization.id
     );
   }
 

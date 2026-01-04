@@ -13,6 +13,12 @@ interface MenuItemInterface {
   role?: string[];
   hide?: boolean;
   requireBilling?: boolean;
+  /**
+   * When true, this item requires system superAdmin privileges (user.admin flag)
+   * This is distinct from organization roles (user.role) to avoid conflating
+   * system-level admin status with organization membership roles.
+   */
+  requireAdmin?: boolean;
 }
 
 export const useMenuItem = () => {
@@ -146,6 +152,41 @@ export const useMenuItem = () => {
   ] satisfies MenuItemInterface[] as MenuItemInterface[];
 
   const secondMenu = [
+    {
+      /**
+       * Admin Panel - Only visible to superAdmins
+       *
+       * Provides access to system administration features including:
+       * - User management
+       * - Organization management
+       * - System settings
+       * - AI provider configuration
+       * - Feature flags
+       *
+       * Uses requireAdmin flag to check system-level superAdmin status (user.admin)
+       * rather than organization role, avoiding conflation with org membership roles.
+       */
+      name: 'Admin',
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M12 2v20M2 12h20" />
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 6v12M6 12h12" />
+        </svg>
+      ),
+      path: '/admin',
+      requireAdmin: true,
+    },
     {
       name: t('affiliate', 'Affiliate'),
       icon: (
@@ -288,6 +329,10 @@ export const TopMenu: FC = () => {
                 if (f.name === 'Billing' && user?.isLifetime) {
                   return false;
                 }
+                // Check requireAdmin flag for system superAdmin privileges
+                if (f.requireAdmin && !user?.admin) {
+                  return false;
+                }
                 if (f.role) {
                   return f.role.includes(user?.role!);
                 }
@@ -313,6 +358,10 @@ export const TopMenu: FC = () => {
               return false;
             }
             if (f.name === 'Billing' && user?.isLifetime) {
+              return false;
+            }
+            // Check requireAdmin flag for system superAdmin privileges
+            if (f.requireAdmin && !user?.admin) {
               return false;
             }
             if (f.role) {
