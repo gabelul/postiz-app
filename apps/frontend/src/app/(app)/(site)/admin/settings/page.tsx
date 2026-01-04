@@ -337,26 +337,26 @@ export default function AdminSettingsPage() {
     <div className="p-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">System Settings</h1>
-        <p className="text-gray-600">Manage system-wide configuration, tiers, features, and AI providers</p>
+        <h1 className="text-3xl font-bold mb-2 text-newTextColor">System Settings</h1>
+        <p className="text-textItemBlur">Manage system-wide configuration, tiers, features, and AI providers</p>
       </div>
 
       {/* Error Alert */}
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
+        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
           <p className="font-semibold">Error: {error}</p>
         </div>
       )}
 
       {/* Tab Navigation */}
-      <div className="mb-8 border-b border-gray-200">
+      <div className="mb-8 border-b border-newBorder">
         <div className="flex gap-4">
           <button
             onClick={() => setActiveTab('system')}
             className={`px-4 py-2 font-semibold border-b-2 transition ${
               activeTab === 'system'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
+                ? 'border-blue-500 text-blue-400'
+                : 'border-transparent text-textItemBlur hover:text-newTextColor'
             }`}
           >
             System Settings
@@ -365,8 +365,8 @@ export default function AdminSettingsPage() {
             onClick={() => setActiveTab('tiers')}
             className={`px-4 py-2 font-semibold border-b-2 transition ${
               activeTab === 'tiers'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
+                ? 'border-blue-500 text-blue-400'
+                : 'border-transparent text-textItemBlur hover:text-newTextColor'
             }`}
           >
             Tier Configuration
@@ -375,8 +375,8 @@ export default function AdminSettingsPage() {
             onClick={() => setActiveTab('features')}
             className={`px-4 py-2 font-semibold border-b-2 transition ${
               activeTab === 'features'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
+                ? 'border-blue-500 text-blue-400'
+                : 'border-transparent text-textItemBlur hover:text-newTextColor'
             }`}
           >
             Feature Flags
@@ -385,8 +385,8 @@ export default function AdminSettingsPage() {
             onClick={() => setActiveTab('ai')}
             className={`px-4 py-2 font-semibold border-b-2 transition ${
               activeTab === 'ai'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
+                ? 'border-blue-500 text-blue-400'
+                : 'border-transparent text-textItemBlur hover:text-newTextColor'
             }`}
           >
             Global AI Providers
@@ -396,7 +396,7 @@ export default function AdminSettingsPage() {
 
       {/* Loading State */}
       {loading && (
-        <div className="text-center py-8 text-gray-500">
+        <div className="text-center py-8 text-textItemBlur">
           Loading settings...
         </div>
       )}
@@ -405,91 +405,91 @@ export default function AdminSettingsPage() {
       {!loading && activeTab === 'system' && (
         <div className="space-y-6">
           {/* Add New Setting */}
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h2 className="text-xl font-bold mb-4">Add New Setting</h2>
+          <div className="bg-newBgColorInner rounded-lg border border-newBorder p-6">
+            <h2 className="text-xl font-bold mb-4 text-newTextColor">Add New Setting</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Setting Key</label>
+                <label className="block text-sm font-medium mb-1 text-newTextColor">Setting Key</label>
                 <input
                   type="text"
                   placeholder="e.g., billing.stripe_key"
                   value={newSetting.key}
                   onChange={(e) => setNewSetting({ ...newSetting, key: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  className="w-full px-3 py-2 border border-newBorder rounded-lg text-sm bg-newBgColorInner text-newTextColor placeholder:text-textItemBlur"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Value</label>
+                <label className="block text-sm font-medium mb-1 text-newTextColor">Value</label>
                 <input
                   type="text"
                   placeholder="Setting value"
                   value={newSetting.value}
                   onChange={(e) => setNewSetting({ ...newSetting, value: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  className="w-full px-3 py-2 border border-newBorder rounded-lg text-sm bg-newBgColorInner text-newTextColor placeholder:text-textItemBlur"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Description</label>
+                <label className="block text-sm font-medium mb-1 text-newTextColor">Description</label>
                 <input
                   type="text"
                   placeholder="Optional description"
                   value={newSetting.description}
                   onChange={(e) => setNewSetting({ ...newSetting, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  className="w-full px-3 py-2 border border-newBorder rounded-lg text-sm bg-newBgColorInner text-newTextColor placeholder:text-textItemBlur"
                 />
               </div>
             </div>
             <button
               onClick={() => saveSetting(newSetting.key, newSetting.value, newSetting.description)}
               disabled={!newSetting.key || !newSetting.value}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-newColColor disabled:text-textItemBlur"
             >
               Add Setting
             </button>
           </div>
 
           {/* Settings List */}
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="bg-newBgColorInner rounded-lg border border-newBorder overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
+                <thead className="bg-newColColor border-b border-newBorder">
                   <tr>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">Key</th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">Value</th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">Description</th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">Actions</th>
+                    <th className="text-left py-3 px-4 font-semibold text-sm text-newTextColor">Key</th>
+                    <th className="text-left py-3 px-4 font-semibold text-sm text-newTextColor">Value</th>
+                    <th className="text-left py-3 px-4 font-semibold text-sm text-newTextColor">Description</th>
+                    <th className="text-left py-3 px-4 font-semibold text-sm text-newTextColor">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {settings.length === 0 ? (
-                    <tr className="border-b border-gray-100">
-                      <td colSpan={4} className="py-8 px-4 text-center text-gray-500">
+                    <tr className="border-b border-newBorder">
+                      <td colSpan={4} className="py-8 px-4 text-center text-textItemBlur">
                         No settings configured
                       </td>
                     </tr>
                   ) : (
                     settings.map((setting) => (
-                      <tr key={setting.id} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="py-4 px-4 text-sm font-mono">{setting.key}</td>
-                        <td className="py-4 px-4 text-sm max-w-md truncate">
+                      <tr key={setting.id} className="border-b border-newBorder hover:bg-newBoxHover">
+                        <td className="py-4 px-4 text-sm font-mono text-newTextColor">{setting.key}</td>
+                        <td className="py-4 px-4 text-sm max-w-md truncate text-newTextColor">
                           {editingSetting === setting.id ? (
                             <input
                               type="text"
                               value={editingValue}
                               onChange={(e) => setEditingValue(e.target.value)}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                              className="w-full px-2 py-1 border border-newBorder rounded text-sm bg-newBgColorInner text-newTextColor"
                             />
                           ) : (
                             setting.value
                           )}
                         </td>
-                        <td className="py-4 px-4 text-sm text-gray-600">
+                        <td className="py-4 px-4 text-sm text-textItemBlur">
                           {editingSetting === setting.id ? (
                             <input
                               type="text"
                               value={editingDescription}
                               onChange={(e) => setEditingDescription(e.target.value)}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                              className="w-full px-2 py-1 border border-newBorder rounded text-sm bg-newBgColorInner text-newTextColor"
                             />
                           ) : (
                             setting.description || '-'
@@ -506,7 +506,7 @@ export default function AdminSettingsPage() {
                               </button>
                               <button
                                 onClick={() => setEditingSetting(null)}
-                                className="px-2 py-1 bg-gray-600 text-white rounded text-xs hover:bg-gray-700"
+                                className="px-2 py-1 bg-newColColor text-newTextColor rounded text-xs hover:bg-newBoxHover"
                               >
                                 Cancel
                               </button>
@@ -546,9 +546,9 @@ export default function AdminSettingsPage() {
       {!loading && activeTab === 'tiers' && (
         <div className="grid grid-cols-1 gap-6">
           {Object.entries(tiers).map(([tierName, config]) => (
-            <div key={tierName} className="bg-white rounded-lg border border-gray-200 p-6">
+            <div key={tierName} className="bg-newBgColorInner rounded-lg border border-newBorder p-6">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold">{tierName} Tier</h3>
+                <h3 className="text-lg font-bold text-newTextColor">{tierName} Tier</h3>
                 {editingTier !== tierName && (
                   <div className="flex gap-2">
                     <button
@@ -562,7 +562,7 @@ export default function AdminSettingsPage() {
                     </button>
                     <button
                       onClick={() => resetTier(tierName)}
-                      className="px-3 py-1 bg-gray-600 text-white rounded text-xs hover:bg-gray-700"
+                      className="px-3 py-1 bg-newColColor text-newTextColor rounded text-xs hover:bg-newBoxHover"
                     >
                       Reset to Default
                     </button>
@@ -574,66 +574,66 @@ export default function AdminSettingsPage() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium mb-1">Monthly Price</label>
+                      <label className="block text-sm font-medium mb-1 text-newTextColor">Monthly Price</label>
                       <input
                         type="number"
                         value={tierForm.month_price || ''}
                         onChange={(e) => setTierForm({ ...tierForm, month_price: parseInt(e.target.value) || 0 })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        className="w-full px-3 py-2 border border-newBorder rounded-lg text-sm bg-newBgColorInner text-newTextColor"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Yearly Price</label>
+                      <label className="block text-sm font-medium mb-1 text-newTextColor">Yearly Price</label>
                       <input
                         type="number"
                         value={tierForm.year_price || ''}
                         onChange={(e) => setTierForm({ ...tierForm, year_price: parseInt(e.target.value) || 0 })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        className="w-full px-3 py-2 border border-newBorder rounded-lg text-sm bg-newBgColorInner text-newTextColor"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Channels</label>
+                      <label className="block text-sm font-medium mb-1 text-newTextColor">Channels</label>
                       <input
                         type="number"
                         value={tierForm.channels || ''}
                         onChange={(e) => setTierForm({ ...tierForm, channels: parseInt(e.target.value) || 0 })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        className="w-full px-3 py-2 border border-newBorder rounded-lg text-sm bg-newBgColorInner text-newTextColor"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Posts Per Month</label>
+                      <label className="block text-sm font-medium mb-1 text-newTextColor">Posts Per Month</label>
                       <input
                         type="number"
                         value={tierForm.posts_per_month || ''}
                         onChange={(e) => setTierForm({ ...tierForm, posts_per_month: parseInt(e.target.value) || 0 })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        className="w-full px-3 py-2 border border-newBorder rounded-lg text-sm bg-newBgColorInner text-newTextColor"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Image Generation Count</label>
+                      <label className="block text-sm font-medium mb-1 text-newTextColor">Image Generation Count</label>
                       <input
                         type="number"
                         value={tierForm.image_generation_count || ''}
                         onChange={(e) => setTierForm({ ...tierForm, image_generation_count: parseInt(e.target.value) || 0 })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        className="w-full px-3 py-2 border border-newBorder rounded-lg text-sm bg-newBgColorInner text-newTextColor"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Video Generation Count</label>
+                      <label className="block text-sm font-medium mb-1 text-newTextColor">Video Generation Count</label>
                       <input
                         type="number"
                         value={tierForm.generate_videos || ''}
                         onChange={(e) => setTierForm({ ...tierForm, generate_videos: parseInt(e.target.value) || 0 })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        className="w-full px-3 py-2 border border-newBorder rounded-lg text-sm bg-newBgColorInner text-newTextColor"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Webhooks</label>
+                      <label className="block text-sm font-medium mb-1 text-newTextColor">Webhooks</label>
                       <input
                         type="number"
                         value={tierForm.webhooks || ''}
                         onChange={(e) => setTierForm({ ...tierForm, webhooks: parseInt(e.target.value) || 0 })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        className="w-full px-3 py-2 border border-newBorder rounded-lg text-sm bg-newBgColorInner text-newTextColor"
                       />
                     </div>
                   </div>
@@ -645,9 +645,9 @@ export default function AdminSettingsPage() {
                           type="checkbox"
                           checked={tierForm[feature] || false}
                           onChange={(e) => setTierForm({ ...tierForm, [feature]: e.target.checked })}
-                          className="w-4 h-4 border border-gray-300 rounded"
+                          className="w-4 h-4 border border-newBorder rounded"
                         />
-                        <span className="text-sm capitalize">{feature.replace(/_/g, ' ')}</span>
+                        <span className="text-sm text-newTextColor capitalize">{feature.replace(/_/g, ' ')}</span>
                       </label>
                     ))}
                   </div>
@@ -661,14 +661,14 @@ export default function AdminSettingsPage() {
                     </button>
                     <button
                       onClick={() => setEditingTier(null)}
-                      className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+                      className="px-4 py-2 bg-newColColor text-newTextColor rounded hover:bg-newBoxHover"
                     >
                       Cancel
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm text-newTextColor">
                   <div><span className="font-semibold">Monthly:</span> ${config.month_price}</div>
                   <div><span className="font-semibold">Yearly:</span> ${config.year_price}</div>
                   <div><span className="font-semibold">Channels:</span> {config.channels}</div>
@@ -687,34 +687,34 @@ export default function AdminSettingsPage() {
 
       {/* Feature Flags Tab */}
       {!loading && activeTab === 'features' && (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="bg-newBgColorInner rounded-lg border border-newBorder overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-newColColor border-b border-newBorder">
                 <tr>
-                  <th className="text-left py-3 px-4 font-semibold text-sm">Feature</th>
-                  <th className="text-left py-3 px-4 font-semibold text-sm">Description</th>
-                  <th className="text-left py-3 px-4 font-semibold text-sm">Status</th>
-                  <th className="text-left py-3 px-4 font-semibold text-sm">Action</th>
+                  <th className="text-left py-3 px-4 font-semibold text-sm text-newTextColor">Feature</th>
+                  <th className="text-left py-3 px-4 font-semibold text-sm text-newTextColor">Description</th>
+                  <th className="text-left py-3 px-4 font-semibold text-sm text-newTextColor">Status</th>
+                  <th className="text-left py-3 px-4 font-semibold text-sm text-newTextColor">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {features.length === 0 ? (
-                  <tr className="border-b border-gray-100">
-                    <td colSpan={4} className="py-8 px-4 text-center text-gray-500">
+                  <tr className="border-b border-newBorder">
+                    <td colSpan={4} className="py-8 px-4 text-center text-textItemBlur">
                       No feature flags configured
                     </td>
                   </tr>
                 ) : (
                   features.map((feature) => (
-                    <tr key={feature.key} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-4 px-4 text-sm font-mono">{feature.key}</td>
-                      <td className="py-4 px-4 text-sm text-gray-600">{feature.description}</td>
+                    <tr key={feature.key} className="border-b border-newBorder hover:bg-newBoxHover">
+                      <td className="py-4 px-4 text-sm font-mono text-newTextColor">{feature.key}</td>
+                      <td className="py-4 px-4 text-sm text-textItemBlur">{feature.description}</td>
                       <td className="py-4 px-4 text-sm">
                         <span className={`px-2 py-1 rounded text-xs font-semibold ${
                           feature.enabled
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
+                            ? 'bg-green-500/20 text-green-400'
+                            : 'bg-newColColor text-textItemBlur'
                         }`}>
                           {feature.enabled ? 'Enabled' : 'Disabled'}
                         </span>
@@ -744,16 +744,16 @@ export default function AdminSettingsPage() {
       {!loading && activeTab === 'ai' && (
         <div className="space-y-6">
           {aiProviders.length === 0 ? (
-            <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-500">
+            <div className="bg-newBgColorInner rounded-lg border border-newBorder p-8 text-center text-textItemBlur">
               No global AI providers configured
             </div>
           ) : (
             aiProviders.map((provider) => (
-              <div key={provider.key} className="bg-white rounded-lg border border-gray-200 p-6">
+              <div key={provider.key} className="bg-newBgColorInner rounded-lg border border-newBorder p-6">
                 <div className="flex justify-between items-center mb-4">
                   <div>
-                    <h3 className="text-lg font-bold">{provider.key}</h3>
-                    <p className="text-sm text-gray-600">{provider.description}</p>
+                    <h3 className="text-lg font-bold text-newTextColor">{provider.key}</h3>
+                    <p className="text-sm text-textItemBlur">{provider.description}</p>
                   </div>
                   {editingAI !== provider.key && (
                     <button
@@ -772,30 +772,30 @@ export default function AdminSettingsPage() {
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium mb-1">Name</label>
+                        <label className="block text-sm font-medium mb-1 text-newTextColor">Name</label>
                         <input
                           type="text"
                           value={aiForm.name || ''}
                           onChange={(e) => setAiForm({ ...aiForm, name: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          className="w-full px-3 py-2 border border-newBorder rounded-lg text-sm bg-newBgColorInner text-newTextColor"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-1">Type</label>
+                        <label className="block text-sm font-medium mb-1 text-newTextColor">Type</label>
                         <input
                           type="text"
                           value={aiForm.type || ''}
                           onChange={(e) => setAiForm({ ...aiForm, type: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          className="w-full px-3 py-2 border border-newBorder rounded-lg text-sm bg-newBgColorInner text-newTextColor"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-1">Model</label>
+                        <label className="block text-sm font-medium mb-1 text-newTextColor">Model</label>
                         <input
                           type="text"
                           value={aiForm.model || ''}
                           onChange={(e) => setAiForm({ ...aiForm, model: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          className="w-full px-3 py-2 border border-newBorder rounded-lg text-sm bg-newBgColorInner text-newTextColor"
                         />
                       </div>
                       <div className="flex items-end">
@@ -804,9 +804,9 @@ export default function AdminSettingsPage() {
                             type="checkbox"
                             checked={aiForm.default || false}
                             onChange={(e) => setAiForm({ ...aiForm, default: e.target.checked })}
-                            className="w-4 h-4 border border-gray-300 rounded"
+                            className="w-4 h-4 border border-newBorder rounded"
                           />
-                          <span className="text-sm">Default Provider</span>
+                          <span className="text-sm text-newTextColor">Default Provider</span>
                         </label>
                       </div>
                     </div>
@@ -820,14 +820,14 @@ export default function AdminSettingsPage() {
                       </button>
                       <button
                         onClick={() => setEditingAI(null)}
-                        className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+                        className="px-4 py-2 bg-newColColor text-newTextColor rounded hover:bg-newBoxHover"
                       >
                         Cancel
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm text-newTextColor">
                     <div><span className="font-semibold">Type:</span> {provider.config.type || '-'}</div>
                     <div><span className="font-semibold">Model:</span> {provider.config.model || '-'}</div>
                     <div><span className="font-semibold">Default:</span> {provider.config.default ? 'Yes' : 'No'}</div>

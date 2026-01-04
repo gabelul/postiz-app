@@ -42,9 +42,9 @@ export class MediaService {
       'ai_images',
       async () => {
         if (generatePromptFirst) {
-          prompt = await this._openAi.generatePromptForPicture(prompt);
+          prompt = await this._openAi.generatePromptForPicture(prompt, org.id);
         }
-        return this._openAi.generateImage(prompt, !!generatePromptFirst);
+        return this._openAi.generateImage(prompt, !!generatePromptFirst, false, org.id);
       }
     );
 
@@ -110,7 +110,8 @@ export class MediaService {
       async () => {
         const loadedData = await video.instance.process(
           body.output,
-          body.customParams
+          body.customParams,
+          org.id
         );
 
         const file = await this.storage.uploadSimple(loadedData);

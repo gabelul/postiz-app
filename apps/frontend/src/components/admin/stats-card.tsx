@@ -45,35 +45,36 @@ export interface StatsCardProps {
 
 /**
  * Color theme configurations
+ * Uses CSS variables that adapt to dark/light mode
  */
 const colorThemes: Record<
   Exclude<StatsCardProps['color'], undefined>,
   { bg: string; border: string; icon: string }
 > = {
   blue: {
-    bg: 'bg-blue-50',
-    border: 'border-blue-200',
-    icon: 'text-blue-600',
+    bg: 'bg-blue-500/10',
+    border: 'border-blue-500/20',
+    icon: 'text-blue-500',
   },
   green: {
-    bg: 'bg-green-50',
-    border: 'border-green-200',
-    icon: 'text-green-600',
+    bg: 'bg-green-500/10',
+    border: 'border-green-500/20',
+    icon: 'text-green-500',
   },
   purple: {
-    bg: 'bg-purple-50',
-    border: 'border-purple-200',
-    icon: 'text-purple-600',
+    bg: 'bg-purple-500/10',
+    border: 'border-purple-500/20',
+    icon: 'text-purple-500',
   },
   orange: {
-    bg: 'bg-orange-50',
-    border: 'border-orange-200',
-    icon: 'text-orange-600',
+    bg: 'bg-orange-500/10',
+    border: 'border-orange-500/20',
+    icon: 'text-orange-500',
   },
   red: {
-    bg: 'bg-red-50',
-    border: 'border-red-200',
-    icon: 'text-red-600',
+    bg: 'bg-red-500/10',
+    border: 'border-red-500/20',
+    icon: 'text-red-500',
   },
 };
 
@@ -108,34 +109,34 @@ export function StatsCard({
   if (isLoading) {
     return (
       <div
-        className={`bg-white p-6 rounded-lg border border-gray-200 ${className}`}
+        className={`bg-newBgColorInner p-6 rounded-lg border border-newBorder dark:border-[#252525] ${className}`}
       >
         <div className="flex items-center justify-between mb-2">
-          <div className="h-4 bg-gray-200 rounded w-24 animate-pulse" />
+          <div className="h-4 bg-newColColor rounded w-24 animate-pulse" />
           {Icon && (
-            <div className="w-8 h-8 bg-gray-200 rounded-lg animate-pulse" />
+            <div className="w-8 h-8 bg-newColColor rounded-lg animate-pulse" />
           )}
         </div>
-        <div className="h-8 bg-gray-200 rounded w-16 animate-pulse mb-2" />
-        <div className="h-3 bg-gray-100 rounded w-32 animate-pulse" />
+        <div className="h-8 bg-newColColor rounded w-16 animate-pulse mb-2" />
+        <div className="h-3 bg-newColColor/50 rounded w-32 animate-pulse" />
       </div>
     );
   }
 
   return (
     <div
-      className={`bg-white p-6 rounded-lg border border-gray-200 hover:shadow-sm transition-shadow ${className}`}
+      className={`bg-newBgColorInner p-6 rounded-lg border border-newBorder hover:bg-newBoxHover transition-colors ${className}`}
     >
       <div className="flex items-start justify-between mb-4">
-        <span className="text-gray-600 text-sm font-medium">{title}</span>
+        <span className="text-textItemBlur text-sm font-medium">{title}</span>
         {Icon && (
           <div className={`p-2 rounded-lg ${theme.bg} ${theme.icon}`}>
             <Icon className="w-4 h-4" />
           </div>
         )}
       </div>
-      <div className="text-3xl font-bold text-gray-900 mb-1">{value}</div>
-      {subtitle && <p className="text-gray-500 text-xs">{subtitle}</p>}
+      <div className="text-3xl font-bold text-newTextColor mb-1">{value}</div>
+      {subtitle && <p className="text-textItemBlur text-xs">{subtitle}</p>}
     </div>
   );
 }

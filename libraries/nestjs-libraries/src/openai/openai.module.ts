@@ -4,6 +4,9 @@ import { AIProviderDiscoveryService } from './ai-provider-discovery.service';
 import { AIProviderManagerService } from './ai-provider-manager.service';
 import { ExtractContentService } from './extract.content.service';
 import { FalService } from './fal.service';
+import { ElevenLabsService } from './elevenlabs.service';
+import { ImageGenerationService } from './image-generation.service';
+import { TTSService } from './tts.service';
 
 /**
  * OpenAI module that provides AI services with multi-provider support
@@ -19,6 +22,11 @@ import { FalService } from './fal.service';
     OpenaiService,
     ExtractContentService,
     FalService,
+    ElevenLabsService,
+
+    // Generic routing services
+    ImageGenerationService,
+    TTSService,
   ],
   exports: [
     // Export services for use in other modules
@@ -27,6 +35,9 @@ import { FalService } from './fal.service';
     AIProviderManagerService,
     ExtractContentService,
     FalService,
+    ElevenLabsService,
+    ImageGenerationService,
+    TTSService,
   ],
 })
 export class OpenaiModule {}

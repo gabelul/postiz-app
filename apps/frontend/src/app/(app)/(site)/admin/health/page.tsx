@@ -8,9 +8,9 @@ import type { SystemHealth, AiProviderStatus } from '@gitroom/frontend/hooks/adm
  */
 function HealthBadge({ status }: { status: 'healthy' | 'degraded' | 'unhealthy' }) {
   const styles = {
-    healthy: 'bg-green-100 text-green-800 border-green-200',
-    degraded: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    unhealthy: 'bg-red-100 text-red-800 border-red-200',
+    healthy: 'bg-green-500/20 text-green-400 border-green-500/30',
+    degraded: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+    unhealthy: 'bg-red-500/20 text-red-400 border-red-500/30',
   };
 
   return (
@@ -56,15 +56,15 @@ function MetricCard({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+    <div className="bg-newBgColorInner rounded-lg shadow-sm p-4 border border-newBorder">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-gray-100 rounded-lg">{icon}</div>
+          <div className="p-2 bg-newColColor rounded-lg">{icon}</div>
           <div>
-            <p className="text-sm text-gray-600">{title}</p>
-            <p className="text-2xl font-semibold text-gray-900">
+            <p className="text-sm text-textItemBlur">{title}</p>
+            <p className="text-2xl font-semibold text-newTextColor">
               {typeof value === 'number' ? value.toLocaleString() : value}
-              {unit && <span className="text-sm text-gray-500 ml-1">{unit}</span>}
+              {unit && <span className="text-sm text-textItemBlur ml-1">{unit}</span>}
             </p>
           </div>
         </div>
@@ -88,20 +88,20 @@ function MemoryBar({ used, total, percentage }: { used: number; total: number; p
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+    <div className="bg-newBgColorInner rounded-lg shadow-sm p-4 border border-newBorder">
       <div className="flex items-center justify-between mb-2">
-        <p className="text-sm font-medium text-gray-700">Heap Memory Usage</p>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm font-medium text-newTextColor">Heap Memory Usage</p>
+        <p className="text-sm text-textItemBlur">
           {used} MB / {total} MB
         </p>
       </div>
-      <div className="w-full bg-gray-200 rounded-full h-2.5">
+      <div className="w-full bg-newColColor rounded-full h-2.5">
         <div
           className={`h-2.5 rounded-full transition-all duration-300 ${getColor(percentage)}`}
           style={{ width: `${percentage}%` }}
         />
       </div>
-      <p className="text-xs text-gray-500 mt-1">{percentage.toFixed(1)}% used (V8 heap)</p>
+      <p className="text-xs text-textItemBlur mt-1">{percentage.toFixed(1)}% used (V8 heap)</p>
     </div>
   );
 }
@@ -113,26 +113,26 @@ function AiProviderCard({ provider }: { provider: AiProviderStatus }) {
   return (
     <div
       key={provider.provider}
-      className="bg-white rounded-lg shadow-sm p-3 border border-gray-200 flex items-center justify-between"
+      className="bg-newBgColorInner rounded-lg shadow-sm p-3 border border-newBorder flex items-center justify-between"
     >
       <div className="flex items-center gap-3">
         <div
           className={`w-2 h-2 rounded-full ${
-            provider.configured ? 'bg-green-500' : 'bg-gray-300'
+            provider.configured ? 'bg-green-500' : 'bg-gray-500'
           }`}
         />
         <div>
-          <p className="text-sm font-medium text-gray-900 capitalize">
+          <p className="text-sm font-medium text-newTextColor capitalize">
             {provider.provider}
           </p>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-textItemBlur">
             {provider.configured ? 'Configured' : 'Not configured'}
             {provider.errorCount > 0 && ` • ${provider.errorCount} errors`}
           </p>
         </div>
       </div>
       {provider.lastUsed && (
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-textItemBlur">
           {new Date(provider.lastUsed).toLocaleDateString()}
         </p>
       )}
@@ -165,15 +165,15 @@ export default function AdminHealthPage() {
   if (healthLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-newTextColor" />
       </div>
     );
   }
 
   if (healthError || !systemHealth) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <p className="text-red-800">Failed to load health metrics</p>
+      <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+        <p className="text-red-400">Failed to load health metrics</p>
       </div>
     );
   }
@@ -196,8 +196,8 @@ export default function AdminHealthPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">System Health</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-2xl font-bold text-newTextColor">System Health</h1>
+          <p className="text-textItemBlur mt-1">
             Monitor system performance and resource usage
           </p>
         </div>
@@ -207,25 +207,25 @@ export default function AdminHealthPage() {
             refetchAi();
             refetchDb();
           }}
-          className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          className="px-4 py-2 bg-newBgColorInner border border-newBorder rounded-lg text-sm font-medium text-newTextColor hover:bg-newBoxHover transition-colors"
         >
           Refresh
         </button>
       </div>
 
       {/* Overall Status */}
-      <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+      <div className="bg-newBgColorInner rounded-lg shadow-sm p-6 border border-newBorder">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-gray-600">Overall System Status</p>
+            <p className="text-sm text-textItemBlur">Overall System Status</p>
             <div className="flex items-center gap-3 mt-1">
               <HealthBadge status={systemHealth.status} />
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-textItemBlur">
                 Uptime: {formatUptime(systemHealth.uptime)}
               </p>
             </div>
           </div>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-textItemBlur">
             Last updated: {new Date(systemHealth.timestamp).toLocaleString()}
           </p>
         </div>
@@ -278,20 +278,20 @@ export default function AdminHealthPage() {
       </div>
 
       {/* AI Providers */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="p-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">AI Providers</h2>
-          <p className="text-sm text-gray-600 mt-1">
+      <div className="bg-newBgColorInner rounded-lg shadow-sm border border-newBorder">
+        <div className="p-4 border-b border-newBorder">
+          <h2 className="text-lg font-semibold text-newTextColor">AI Providers</h2>
+          <p className="text-sm text-textItemBlur mt-1">
             Status of configured AI providers
           </p>
         </div>
         <div className="p-4">
           {aiLoading ? (
             <div className="flex items-center justify-center h-32">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-400" />
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-newTextColor" />
             </div>
           ) : aiError ? (
-            <p className="text-red-600 text-sm">Failed to load AI provider status</p>
+            <p className="text-red-400 text-sm">Failed to load AI provider status</p>
           ) : aiProviders && aiProviders.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {aiProviders.map((provider) => (
@@ -299,7 +299,7 @@ export default function AdminHealthPage() {
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-sm">No AI providers configured</p>
+            <p className="text-textItemBlur text-sm">No AI providers configured</p>
           )}
         </div>
       </div>
@@ -310,7 +310,7 @@ export default function AdminHealthPage() {
 // Simple icons (using SVG-like components)
 function UserIcon() {
   return (
-    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-5 h-5 text-newTextColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -323,7 +323,7 @@ function UserIcon() {
 
 function BuildingIcon() {
   return (
-    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-5 h-5 text-newTextColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -336,7 +336,7 @@ function BuildingIcon() {
 
 function DocumentIcon() {
   return (
-    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-5 h-5 text-newTextColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -349,7 +349,7 @@ function DocumentIcon() {
 
 function CreditCardIcon() {
   return (
-    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-5 h-5 text-newTextColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -362,7 +362,7 @@ function CreditCardIcon() {
 
 function DatabaseIcon() {
   return (
-    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-5 h-5 text-newTextColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
         strokeLinecap="round"
         strokeLinejoin="round"

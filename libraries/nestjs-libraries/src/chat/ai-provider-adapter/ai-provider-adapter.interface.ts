@@ -50,14 +50,22 @@ export interface IAIProviderAdapter {
  */
 export interface IAITaskConfig {
   /**
-   * Type of task (image, text, video-slides, etc.)
+   * Type of task (image, text, video-slides, agent, or legacy smart/fast)
    */
-  taskType: 'image' | 'text' | 'video-slides' | 'agent';
+  taskType: 'image' | 'text' | 'video-slides' | 'agent' | 'smart' | 'fast';
 
   /**
    * Primary provider to use (e.g., 'openai', 'anthropic', 'custom')
+   * This is the provider type for backward compatibility
+   * @deprecated Use providerId instead
    */
   provider: string;
+
+  /**
+   * Primary provider ID to use
+   * This is the database ID of the AIProvider record
+   */
+  providerId?: string;
 
   /**
    * Model to use (e.g., 'gpt-4.1', 'claude-3-opus', 'dall-e-3')
@@ -66,8 +74,14 @@ export interface IAITaskConfig {
 
   /**
    * Fallback provider if primary unavailable
+   * @deprecated Use fallbackProviderId instead
    */
   fallbackProvider?: string;
+
+  /**
+   * Fallback provider ID if primary unavailable
+   */
+  fallbackProviderId?: string;
 
   /**
    * Fallback model if primary unavailable
@@ -120,5 +134,15 @@ export interface ITextGenerationResponse {
 
 /**
  * Task type for model selection
+ *
+ * New types (for per-task AI configuration):
+ * - 'image': Image generation (DALL-E, Stable Diffusion)
+ * - 'text': Text generation (social posts, content writing)
+ * - 'video-slides': Video slides generation (prompts and voice text)
+ * - 'agent': AI assistant and chat functionality
+ *
+ * Legacy types (mapped to new types in OpenaiService):
+ * - 'smart': Complex tasks, maps to 'text'
+ * - 'fast': Simple tasks, maps to 'text'
  */
-export type AITaskType = 'image' | 'text' | 'video-slides' | 'agent';
+export type AITaskType = 'image' | 'text' | 'video-slides' | 'agent' | 'smart' | 'fast';

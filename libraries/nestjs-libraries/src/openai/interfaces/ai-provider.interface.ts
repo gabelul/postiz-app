@@ -42,8 +42,18 @@ export interface AIProvider {
 
 /**
  * Task types for model selection
+ *
+ * Legacy types (mapped to new types):
+ * - 'smart': Complex tasks, uses 'text' task type
+ * - 'fast': Simple tasks, uses 'text' task type
+ *
+ * New types (directly used for provider selection):
+ * - 'image': Image generation
+ * - 'text': Text generation (social posts, content writing)
+ * - 'video-slides': Video slides generation (prompts and voice text)
+ * - 'agent': AI assistant and chat functionality
  */
-export type AITaskType = 'smart' | 'fast';
+export type AITaskType = 'smart' | 'fast' | 'image' | 'text' | 'video-slides' | 'agent';
 
 /**
  * Provider rotation strategies

@@ -119,12 +119,12 @@ export default function AdminOrganizationsPage() {
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Organization Management</h1>
-        <p className="text-gray-600">Manage organizations, tiers, billing, and custom limits</p>
+        <h1 className="text-3xl font-bold mb-2 text-newTextColor">Organization Management</h1>
+        <p className="text-textItemBlur">Manage organizations, tiers, billing, and custom limits</p>
       </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
+        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
           <p className="font-semibold">Error: {error}</p>
         </div>
       )}
@@ -138,40 +138,40 @@ export default function AdminOrganizationsPage() {
             setSearch(e.target.value);
             setPage(1);
           }}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-4 py-2 border border-newBorder rounded-lg bg-newBgColorInner text-newTextColor focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-textItemBlur"
         />
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div className="bg-newBgColorInner rounded-lg border border-newBorder overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-newColColor border-b border-newBorder">
               <tr>
-                <th className="text-left py-3 px-4 font-semibold text-sm">Organization</th>
-                <th className="text-left py-3 px-4 font-semibold text-sm">Tier</th>
-                <th className="text-left py-3 px-4 font-semibold text-sm">Users</th>
-                <th className="text-left py-3 px-4 font-semibold text-sm">Billing Bypass</th>
-                <th className="text-left py-3 px-4 font-semibold text-sm">Actions</th>
+                <th className="text-left py-3 px-4 font-semibold text-sm text-newTextColor">Organization</th>
+                <th className="text-left py-3 px-4 font-semibold text-sm text-newTextColor">Tier</th>
+                <th className="text-left py-3 px-4 font-semibold text-sm text-newTextColor">Users</th>
+                <th className="text-left py-3 px-4 font-semibold text-sm text-newTextColor">Billing Bypass</th>
+                <th className="text-left py-3 px-4 font-semibold text-sm text-newTextColor">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr className="border-b border-gray-100">
-                  <td colSpan={5} className="py-8 px-4 text-center text-gray-500">Loading...</td>
+                <tr className="border-b border-newBorder">
+                  <td colSpan={5} className="py-8 px-4 text-center text-textItemBlur">Loading...</td>
                 </tr>
               ) : organizations.length === 0 ? (
-                <tr className="border-b border-gray-100">
-                  <td colSpan={5} className="py-8 px-4 text-center text-gray-500">No organizations found</td>
+                <tr className="border-b border-newBorder">
+                  <td colSpan={5} className="py-8 px-4 text-center text-textItemBlur">No organizations found</td>
                 </tr>
               ) : (
                 organizations.map((org) => (
-                  <tr key={org.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-4 px-4 text-sm font-semibold">{org.name}</td>
+                  <tr key={org.id} className="border-b border-newBorder hover:bg-newBoxHover">
+                    <td className="py-4 px-4 text-sm font-semibold text-newTextColor">{org.name}</td>
                     <td className="py-4 px-4 text-sm">
                       <select
                         value={org.currentTier}
                         onChange={(e) => setTier(org.id, e.target.value)}
-                        className="px-2 py-1 border border-gray-300 rounded text-xs"
+                        className="px-2 py-1 border border-newBorder rounded text-xs bg-newBgColorInner text-newTextColor"
                       >
                         <option>FREE</option>
                         <option>STANDARD</option>
@@ -180,14 +180,14 @@ export default function AdminOrganizationsPage() {
                         <option>ULTIMATE</option>
                       </select>
                     </td>
-                    <td className="py-4 px-4 text-sm">{org.userCount}</td>
+                    <td className="py-4 px-4 text-sm text-newTextColor">{org.userCount}</td>
                     <td className="py-4 px-4 text-sm">
                       <button
                         onClick={() => toggleBypassBilling(org.id, org.bypassBilling)}
                         className={`px-2 py-1 rounded text-xs font-semibold ${
                           org.bypassBilling
-                            ? 'bg-red-100 text-red-800 hover:bg-red-200'
-                            : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                            ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                            : 'bg-newColColor text-textItemBlur hover:bg-newBoxHover'
                         }`}
                       >
                         {org.bypassBilling ? 'ON' : 'OFF'}
@@ -230,25 +230,25 @@ export default function AdminOrganizationsPage() {
         </div>
 
         {editingLimits && (
-          <div className="p-6 border-t border-gray-200 bg-gray-50">
-            <h3 className="font-bold mb-4">Custom Limits for {organizations.find((o) => o.id === editingLimits)?.name}</h3>
+          <div className="p-6 border-t border-newBorder bg-newColColor">
+            <h3 className="font-bold mb-4 text-newTextColor">Custom Limits for {organizations.find((o) => o.id === editingLimits)?.name}</h3>
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Channels</label>
+                <label className="block text-sm font-medium mb-1 text-newTextColor">Channels</label>
                 <input
                   type="number"
                   value={limitsForm.channels || ''}
                   onChange={(e) => setLimitsForm({ ...limitsForm, channels: e.target.value ? parseInt(e.target.value) : undefined })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                  className="w-full px-3 py-2 border border-newBorder rounded text-sm bg-newBgColorInner text-newTextColor"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Posts Per Month</label>
+                <label className="block text-sm font-medium mb-1 text-newTextColor">Posts Per Month</label>
                 <input
                   type="number"
                   value={limitsForm.posts_per_month || ''}
                   onChange={(e) => setLimitsForm({ ...limitsForm, posts_per_month: e.target.value ? parseInt(e.target.value) : undefined })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                  className="w-full px-3 py-2 border border-newBorder rounded text-sm bg-newBgColorInner text-newTextColor"
                 />
               </div>
             </div>
@@ -264,15 +264,15 @@ export default function AdminOrganizationsPage() {
           <button
             onClick={() => setPage(Math.max(1, page - 1))}
             disabled={page === 1}
-            className="px-4 py-2 border border-gray-300 rounded disabled:opacity-50"
+            className="px-4 py-2 border border-newBorder rounded bg-newBgColorInner text-newTextColor disabled:opacity-50 hover:bg-newBoxHover"
           >
             Previous
           </button>
-          <span className="px-4 py-2">Page {page} of {totalPages}</span>
+          <span className="px-4 py-2 text-newTextColor">Page {page} of {totalPages}</span>
           <button
             onClick={() => setPage(Math.min(totalPages, page + 1))}
             disabled={page === totalPages}
-            className="px-4 py-2 border border-gray-300 rounded disabled:opacity-50"
+            className="px-4 py-2 border border-newBorder rounded bg-newBgColorInner text-newTextColor disabled:opacity-50 hover:bg-newBoxHover"
           >
             Next
           </button>

@@ -25,7 +25,8 @@
       "Bash(./test-build.sh:*)",
       "Bash(grep:*)",
       "Bash(./deploy.sh:*)",
-      "Bash(docker compose:*)"
+      "Bash(docker compose:*)",
+      "Bash(docker logs:*)"
     ],
     "deny": [],
     "ask": []

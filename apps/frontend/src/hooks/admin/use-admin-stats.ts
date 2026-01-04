@@ -13,27 +13,44 @@ import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
  * Dashboard Statistics
  *
  * System-wide metrics displayed on admin dashboard.
+ * Matches the backend DashboardStats response structure.
  */
 export interface DashboardStats {
-  totalUsers: number;
-  totalOrganizations: number;
-  activeSubscriptions: number;
-  totalPostsLast30Days: number;
-  totalPostsLast24Hours: number;
-  cacheStatus: {
-    cached: boolean;
-    lastRefresh?: string;
+  users: {
+    total: number;
+    superAdmins: number;
+    activeThisMonth: number;
   };
-}
-
-/**
- * Quick Statistics
- *
- * Lightweight stats for header/sidebar display.
- */
-export interface QuickStats {
-  totalUsers: number;
-  totalOrganizations: number;
+  organizations: {
+    total: number;
+    withBillingBypass: number;
+    activeThisMonth: number;
+  };
+  subscriptions: {
+    total: number;
+    byTier: Record<string, number>;
+    trial: number;
+    paid: number;
+  };
+  posts: {
+    total: number;
+    publishedThisMonth: number;
+    scheduled: number;
+    errors: number;
+  };
+  integrations: {
+    total: number;
+    active: number;
+  };
+  aiProviders: {
+    total: number;
+    active: number;
+  };
+  system: {
+    version: string;
+    uptime: number;
+    lastCacheRefresh: string;
+  };
 }
 
 /**
@@ -58,7 +75,6 @@ export interface ActivityItem {
 export const adminStatsKeys = {
   all: ['admin', 'stats'] as const,
   dashboard: () => [...adminStatsKeys.all, 'dashboard'] as const,
-  quick: () => [...adminStatsKeys.all, 'quick'] as const,
   activity: (limit: number = 10) =>
     [...adminStatsKeys.all, 'activity', limit] as const,
 };
@@ -92,34 +108,6 @@ export function useAdminStats(
       return response.json() as Promise<DashboardStats>;
     },
     staleTime: 30000, // 30 seconds
-    retry: 1,
-    ...options,
-  });
-}
-
-/**
- * Hook to fetch quick statistics
- *
- * Lightweight endpoint for header/sidebar badges.
- *
- * @param options - React Query options
- * @returns Quick stats query result
- */
-export function useQuickStats(
-  options?: Omit<UseQueryOptions<QuickStats>, 'queryKey' | 'queryFn'>
-) {
-  const fetch = useFetch();
-
-  return useQuery({
-    queryKey: adminStatsKeys.quick(),
-    queryFn: async () => {
-      const response = await fetch('/api/admin/dashboard/quick-stats');
-      if (!response.ok) {
-        throw new Error('Failed to fetch quick stats');
-      }
-      return response.json() as Promise<QuickStats>;
-    },
-    staleTime: 60000, // 1 minute - quick stats can be cached longer
     retry: 1,
     ...options,
   });
@@ -199,7 +187,6 @@ export function useRefreshCache(
     onSuccess: (...args) => {
       // Invalidate dashboard query to fetch fresh data
       queryClient.invalidateQueries({ queryKey: adminStatsKeys.dashboard() });
-      queryClient.invalidateQueries({ queryKey: adminStatsKeys.quick() });
       options?.onSuccess?.(...args);
     },
     ...options,

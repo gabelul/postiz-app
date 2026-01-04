@@ -38,6 +38,7 @@ import { AdminUsersController } from '@gitroom/backend/api/routes/admin/users.co
 import { AdminOrganizationsController } from '@gitroom/backend/api/routes/admin/organizations.controller';
 import { AdminSettingsController } from '@gitroom/backend/api/routes/admin/settings.controller';
 import { AdminAIProvidersController } from '@gitroom/backend/api/routes/admin/ai-providers.controller';
+import { AdminAITasksController } from '@gitroom/backend/api/routes/admin/ai-tasks.controller';
 import { AdminDashboardController } from '@gitroom/backend/api/routes/admin/dashboard.controller';
 import { AdminEmailSettingsController } from '@gitroom/backend/api/routes/admin/email-settings.controller';
 import { BulkOperationsController } from '@gitroom/backend/api/routes/admin/bulk-operations.controller';
@@ -48,6 +49,7 @@ import { EncryptedSettingsService } from '@gitroom/backend/services/admin/encryp
 import { AdminEmailService } from '@gitroom/backend/services/admin/admin-email.service';
 import { BulkOperationsService } from '@gitroom/backend/services/admin/bulk-operations.service';
 import { AdminAuditService } from '@gitroom/backend/services/admin/admin-audit.service';
+import { ChatModule } from '@gitroom/nestjs-libraries/chat/chat.module';
 
 const authenticatedController = [
   UsersController,
@@ -69,7 +71,7 @@ const authenticatedController = [
   ThirdPartyController,
 ];
 @Module({
-  imports: [UploadModule],
+  imports: [UploadModule, ChatModule],
   controllers: [
     RootController,
     StripeController,
@@ -81,6 +83,7 @@ const authenticatedController = [
     AdminOrganizationsController,
     AdminSettingsController,
     AdminAIProvidersController,
+    AdminAITasksController,
     AdminDashboardController,
     AdminEmailSettingsController,
     BulkOperationsController,
@@ -121,6 +124,7 @@ export class ApiModule implements NestModule {
       AdminOrganizationsController,
       AdminSettingsController,
       AdminAIProvidersController,
+      AdminAITasksController,
       AdminDashboardController,
       AdminEmailSettingsController,
       BulkOperationsController,

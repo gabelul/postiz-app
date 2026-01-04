@@ -393,32 +393,32 @@ export default function AdminStorageProvidersPage() {
     <div className="p-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Storage Providers</h1>
-        <p className="text-gray-600">Configure file storage backend (Local, S3, FTP, SFTP, Cloudflare R2)</p>
+        <h1 className="text-3xl font-bold mb-2 text-newTextColor">Storage Providers</h1>
+        <p className="text-textItemBlur">Configure file storage backend (Local, S3, FTP, SFTP, Cloudflare R2)</p>
       </div>
 
       {/* Error Alert */}
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
+        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
           <p className="font-semibold">Error: {error}</p>
         </div>
       )}
 
       {/* Add New Provider Form */}
       {editingProviderId === null && (
-        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-8">
-          <h2 className="text-xl font-bold mb-4">Add New Storage Provider</h2>
+        <div className="bg-newBgColorInner rounded-lg border border-newBorder p-6 mb-8">
+          <h2 className="text-xl font-bold mb-4 text-newTextColor">Add New Storage Provider</h2>
 
           {/* Provider Type Selector */}
           <div className="mb-6">
-            <label className="block text-sm font-medium mb-2">Provider Type</label>
+            <label className="block text-sm font-medium mb-2 text-newTextColor">Provider Type</label>
             <select
               value={selectedType}
               onChange={(e) => {
                 setSelectedType(e.target.value);
                 setFormData({});
               }}
-              className="w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-full md:w-1/3 px-3 py-2 border border-newBorder rounded-lg text-sm bg-newBgColorInner text-newTextColor"
             >
               {Object.entries(PROVIDER_TYPES).map(([key, config]) => (
                 <option key={key} value={key}>
@@ -426,7 +426,7 @@ export default function AdminStorageProvidersPage() {
                 </option>
               ))}
             </select>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-textItemBlur mt-1">
               {PROVIDER_TYPES[selectedType]?.description}
             </p>
           </div>
@@ -434,21 +434,21 @@ export default function AdminStorageProvidersPage() {
           {/* Provider Configuration Fields */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
-              <label className="block text-sm font-medium mb-1">Provider Name</label>
+              <label className="block text-sm font-medium mb-1 text-newTextColor">Provider Name</label>
               <input
                 type="text"
                 placeholder="e.g., Production Storage"
                 value={formData.name || ''}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="w-full px-3 py-2 border border-newBorder rounded-lg text-sm bg-newBgColorInner text-newTextColor placeholder:text-textItemBlur"
               />
             </div>
 
             {PROVIDER_TYPES[selectedType]?.fields.map((field) => (
               <div key={field.key}>
-                <label className="block text-sm font-medium mb-1">
+                <label className="block text-sm font-medium mb-1 text-newTextColor">
                   {field.label}
-                  {field.required && <span className="text-red-600">*</span>}
+                  {field.required && <span className="text-red-500">*</span>}
                 </label>
                 {field.type === 'textarea' ? (
                   <textarea
@@ -456,7 +456,7 @@ export default function AdminStorageProvidersPage() {
                     value={formData[field.key] || ''}
                     onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
                     rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono"
+                    className="w-full px-3 py-2 border border-newBorder rounded-lg text-sm font-mono bg-newBgColorInner text-newTextColor placeholder:text-textItemBlur"
                   />
                 ) : field.type === 'checkbox' ? (
                   <label className="flex items-center gap-2 cursor-pointer">
@@ -464,15 +464,15 @@ export default function AdminStorageProvidersPage() {
                       type="checkbox"
                       checked={formData[field.key] || false}
                       onChange={(e) => setFormData({ ...formData, [field.key]: e.target.checked })}
-                      className="w-4 h-4 border border-gray-300 rounded"
+                      className="w-4 h-4 border border-newBorder rounded"
                     />
-                    <span className="text-sm">{field.label}</span>
+                    <span className="text-sm text-newTextColor">{field.label}</span>
                   </label>
                 ) : field.type === 'select' ? (
                   <select
                     value={formData[field.key] || ''}
                     onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    className="w-full px-3 py-2 border border-newBorder rounded-lg text-sm bg-newBgColorInner text-newTextColor"
                   >
                     <option value="">Select...</option>
                     <option value="password">Password</option>
@@ -484,7 +484,7 @@ export default function AdminStorageProvidersPage() {
                     placeholder={field.placeholder}
                     value={formData[field.key] || ''}
                     onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    className="w-full px-3 py-2 border border-newBorder rounded-lg text-sm bg-newBgColorInner text-newTextColor placeholder:text-textItemBlur"
                   />
                 )}
               </div>
@@ -495,7 +495,7 @@ export default function AdminStorageProvidersPage() {
             <button
               onClick={() => saveProvider(formData.name)}
               disabled={!formData.name || loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-newColColor disabled:text-textItemBlur"
             >
               Add Provider
             </button>
@@ -504,7 +504,7 @@ export default function AdminStorageProvidersPage() {
                 setSelectedType('LOCAL');
                 setFormData({});
               }}
-              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+              className="px-4 py-2 bg-newColColor text-newTextColor rounded-lg hover:bg-newBoxHover"
             >
               Clear
             </button>
@@ -514,7 +514,7 @@ export default function AdminStorageProvidersPage() {
 
       {/* Loading State */}
       {loading && (
-        <div className="text-center py-8 text-gray-500">
+        <div className="text-center py-8 text-textItemBlur">
           Loading storage providers...
         </div>
       )}
@@ -523,42 +523,42 @@ export default function AdminStorageProvidersPage() {
       {!loading && (
         <div className="grid grid-cols-1 gap-6">
           {providers.length === 0 ? (
-            <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-500">
+            <div className="bg-newBgColorInner rounded-lg border border-newBorder p-8 text-center text-textItemBlur">
               No storage providers configured. Add one to get started.
             </div>
           ) : (
             providers.map((provider) => (
               <div
                 key={provider.id}
-                className={`bg-white rounded-lg border-2 p-6 ${
-                  provider.isActive ? 'border-green-500 bg-green-50' : 'border-gray-200'
+                className={`bg-newBgColorInner rounded-lg border-2 p-6 ${
+                  provider.isActive ? 'border-green-500 bg-green-500/10' : 'border-newBorder'
                 }`}
               >
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
-                      <h3 className="text-lg font-bold">{provider.name}</h3>
+                      <h3 className="text-lg font-bold text-newTextColor">{provider.name}</h3>
                       {provider.isActive && (
-                        <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-semibold">
+                        <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs font-semibold">
                           ACTIVE
                         </span>
                       )}
-                      <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs">
+                      <span className="px-2 py-1 bg-newColColor text-textItemBlur rounded text-xs">
                         {PROVIDER_TYPES[provider.type]?.label || provider.type}
                       </span>
                     </div>
                     {provider.usageGB && (
-                      <p className="text-sm text-gray-600">
-                        Storage Used: <span className="font-semibold">{provider.usageGB.toFixed(2)} GB</span>
+                      <p className="text-sm text-textItemBlur">
+                        Storage Used: <span className="font-semibold text-newTextColor">{provider.usageGB.toFixed(2)} GB</span>
                       </p>
                     )}
                     {provider.testStatus && (
                       <p className={`text-sm mt-1 ${
                         provider.testStatus === 'success'
-                          ? 'text-green-600'
+                          ? 'text-green-500'
                           : provider.testStatus === 'error'
-                          ? 'text-red-600'
-                          : 'text-gray-600'
+                          ? 'text-red-500'
+                          : 'text-textItemBlur'
                       }`}>
                         Test Status: {provider.testStatus}
                         {provider.testError && ` - ${provider.testError}`}
@@ -580,7 +580,7 @@ export default function AdminStorageProvidersPage() {
                     <button
                       onClick={() => testProvider(provider.id)}
                       disabled={testingProviderId === provider.id}
-                      className="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:bg-gray-400"
+                      className="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:bg-newColColor disabled:text-textItemBlur"
                     >
                       {testingProviderId === provider.id ? 'Testing...' : 'Test'}
                     </button>
@@ -604,12 +604,12 @@ export default function AdminStorageProvidersPage() {
                 </div>
 
                 {/* Configuration Display */}
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <h4 className="text-sm font-semibold mb-2 text-gray-700">Configuration</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
+                <div className="mt-4 pt-4 border-t border-newBorder">
+                  <h4 className="text-sm font-semibold mb-2 text-newTextColor">Configuration</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-textItemBlur">
                     {Object.entries(provider.config).map(([key, value]) => (
                       <div key={key}>
-                        <span className="font-semibold capitalize">{key.replace(/([A-Z])/g, ' $1')}:</span>{' '}
+                        <span className="font-semibold text-newTextColor capitalize">{key.replace(/([A-Z])/g, ' $1')}:</span>{' '}
                         {typeof value === 'boolean' ? (value ? 'Yes' : 'No') : String(value).substring(0, 50)}
                         {String(value).length > 50 && '...'}
                       </div>
@@ -623,27 +623,27 @@ export default function AdminStorageProvidersPage() {
       )}
 
       {/* Provider Types Reference */}
-      <div className="mt-12 bg-blue-50 rounded-lg border border-blue-200 p-6">
-        <h3 className="font-bold text-blue-900 mb-4">Storage Provider Types</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-800">
+      <div className="mt-12 bg-blue-500/10 rounded-lg border border-blue-500/20 p-6">
+        <h3 className="font-bold text-blue-400 mb-4">Storage Provider Types</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-300">
           <div>
-            <h4 className="font-semibold mb-1">Local Storage</h4>
+            <h4 className="font-semibold mb-1 text-newTextColor">Local Storage</h4>
             <p>Store files on your server. Good for small-medium deployments.</p>
           </div>
           <div>
-            <h4 className="font-semibold mb-1">Cloudflare R2</h4>
+            <h4 className="font-semibold mb-1 text-newTextColor">Cloudflare R2</h4>
             <p>S3-compatible cloud storage. Competitive pricing, unlimited egress.</p>
           </div>
           <div>
-            <h4 className="font-semibold mb-1">S3-Compatible</h4>
+            <h4 className="font-semibold mb-1 text-newTextColor">S3-Compatible</h4>
             <p>AWS S3, MinIO, DigitalOcean Spaces, Backblaze B2, Wasabi, etc.</p>
           </div>
           <div>
-            <h4 className="font-semibold mb-1">FTP/FTPS</h4>
+            <h4 className="font-semibold mb-1 text-newTextColor">FTP/FTPS</h4>
             <p>Standard FTP with optional SSL/TLS encryption for secure transfer.</p>
           </div>
           <div>
-            <h4 className="font-semibold mb-1">SFTP</h4>
+            <h4 className="font-semibold mb-1 text-newTextColor">SFTP</h4>
             <p>Secure FTP over SSH. Supports both password and key-based authentication.</p>
           </div>
         </div>

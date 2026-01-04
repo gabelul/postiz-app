@@ -698,8 +698,15 @@ export class PostsService {
     return postList;
   }
 
-  async separatePosts(content: string, len: number) {
-    return this.openaiService.separatePosts(content, len);
+  /**
+   * Separate long content into multiple posts with character limits
+   * @param content - Content to separate
+   * @param len - Maximum character length per post
+   * @param orgId - Organization ID for AI provider selection
+   * @returns Separated posts with character limits enforced
+   */
+  async separatePosts(content: string, len: number, orgId?: string) {
+    return this.openaiService.separatePosts(content, len, orgId);
   }
 
   async changeDate(orgId: string, id: string, date: string) {

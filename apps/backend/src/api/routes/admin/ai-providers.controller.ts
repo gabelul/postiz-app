@@ -98,11 +98,23 @@ export class AdminAIProvidersController {
     },
     @GetUserFromRequest() user: User
   ) {
-    if (!body.name || !body.type || !body.apiKey) {
-      throw new BadRequestException('name, type, and apiKey are required');
+    if (!body.name || !body.type) {
+      throw new BadRequestException('name and type are required');
     }
 
-    return this._aiProvidersService.createProvider(org.id, body);
+    // API key is optional for some providers like ollama and custom openai-compatible
+    const providersThatDontRequireKey = ['ollama', 'openai-compatible'];
+    if (!body.apiKey && !providersThatDontRequireKey.includes(body.type)) {
+      throw new BadRequestException(`API key is required for ${body.type} providers`);
+    }
+
+    // Use empty string as default for optional API keys
+    const payload = {
+      ...body,
+      apiKey: body.apiKey || '',
+    };
+
+    return this._aiProvidersService.createProvider(org.id, payload);
   }
 
   /**

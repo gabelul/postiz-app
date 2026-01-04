@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getCookieUrlFromDomain } from '@gitroom/helpers/subdomain/subdomain.management';
-import { internalFetch } from '@gitroom/helpers/utils/internal.fetch';
+import { customFetch } from '@gitroom/helpers/utils/custom.fetch.func';
 import acceptLanguage from 'accept-language';
 import {
   cookieName,
@@ -56,7 +56,7 @@ export async function middleware(request: NextRequest) {
         ? {
             secure: true,
             httpOnly: true,
-            sameSite: false,
+            sameSite: 'none',
           }
         : {}),
       maxAge: -1,
@@ -97,7 +97,7 @@ export async function middleware(request: NextRequest) {
               path: '/',
               secure: true,
               httpOnly: true,
-              sameSite: false,
+              sameSite: 'none',
               domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
             }
           : {}),
@@ -111,32 +111,47 @@ export async function middleware(request: NextRequest) {
     // Check admin route access - requires superAdmin privileges
     if (nextUrl.pathname.startsWith('/admin') && authCookie) {
       try {
-        const userResponse = await internalFetch('/user/self', {
-          headers: {
-            auth: authCookie,
-          },
-        });
+        // Use internal backend URL for server-side middleware calls (inside container)
+        // Falls back to public URL for local development
+        const backendUrl = process.env.INTERNAL_BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL!;
+        const userResponse = await customFetch(
+          { baseUrl: backendUrl },
+          authCookie,
+          request.cookies.get('showorg')?.value
+        )('/user/self');
 
         if (!userResponse.ok) {
-          return NextResponse.redirect(new URL('/auth/logout', nextUrl.href));
+          // Only clear auth when backend explicitly rejects it (invalid/expired token).
+          if (userResponse.status === 401 || userResponse.status === 403) {
+            return NextResponse.redirect(new URL('/auth/logout', nextUrl.href));
+          }
+          return NextResponse.redirect(new URL('/', nextUrl.href));
         }
 
         const userData = await userResponse.json();
 
-        // Check if user is superAdmin
-        if (!userData.isSuperAdmin) {
+        // Check if user has system superAdmin privileges (admin flag from backend)
+        // The admin flag is set based on user.isSuperAdmin in the database
+        if (!userData.admin) {
           // Non-admin users trying to access admin routes get redirected
           return NextResponse.redirect(new URL('/', nextUrl.href));
         }
       } catch (adminCheckError) {
         console.error('Admin check failed:', adminCheckError);
-        return NextResponse.redirect(new URL('/auth/logout', nextUrl.href));
+        // Don't log a valid user out due to transient admin-check failures (network/edge reachability).
+        return NextResponse.redirect(new URL('/', nextUrl.href));
       }
     }
 
     if (org) {
+      // Use internal backend URL for server-side middleware calls (inside container)
+      const backendUrl = process.env.INTERNAL_BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL!;
       const { id } = await (
-        await internalFetch('/user/join-org', {
+        await customFetch(
+          { baseUrl: backendUrl },
+          authCookie,
+          request.cookies.get('showorg')?.value
+        )('/user/join-org', {
           body: JSON.stringify({
             org,
           }),
@@ -153,7 +168,7 @@ export async function middleware(request: NextRequest) {
                 path: '/',
                 secure: true,
                 httpOnly: true,
-                sameSite: false,
+                sameSite: 'none',
                 domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
               }
             : {}),
@@ -162,6 +177,7 @@ export async function middleware(request: NextRequest) {
       }
       return redirect;
     }
+
     if (nextUrl.pathname === '/') {
       return NextResponse.redirect(
         new URL(

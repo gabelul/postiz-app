@@ -4,7 +4,7 @@
  * Admin AI Providers Configuration Page
  *
  * Allows superAdmins to:
- * - View and manage all configured AI providers (OpenAI, Anthropic, Gemini, Ollama, Together AI, custom endpoints)
+ * - View and manage all configured AI providers (OpenAI, Anthropic, Gemini, Ollama, Together AI, FAL, ElevenLabs, custom endpoints)
  * - Add new providers with API keys and custom base URLs
  * - Discover available models for each provider
  * - Test provider connectivity and configuration
@@ -19,6 +19,8 @@
  * - Ollama (local LLMs)
  * - Together AI (open-source models)
  * - OpenAI-compatible (custom endpoints)
+ * - FAL.ai (image generation: Ideogram, FLUX, Stable Diffusion)
+ * - ElevenLabs (text-to-speech voice generation)
  *
  * Only accessible by superAdmins
  */
@@ -28,19 +30,21 @@ import { useState, useEffect } from 'react';
 interface AIProvider {
   id: string;
   name: string;
-  type: 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'together' | 'openai-compatible';
+  type: 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'together' | 'openai-compatible' | 'fal' | 'elevenlabs';
   apiKey: string;
   baseUrl?: string;
   isDefault: boolean;
   testStatus?: 'success' | 'failed' | 'pending';
   testError?: string;
-  availableModels: string[];
+  availableModels?: string | null; // Stored as JSON string in database
   createdAt: string;
 }
 
 export default function AdminAIProvidersPage() {
   const [providers, setProviders] = useState<AIProvider[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -53,7 +57,7 @@ export default function AdminAIProvidersPage() {
    */
   const [formData, setFormData] = useState<{
     name: string;
-    type: 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'together' | 'openai-compatible';
+    type: 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'together' | 'openai-compatible' | 'fal' | 'elevenlabs';
     apiKey: string;
     baseUrl: string;
   }>({
@@ -64,44 +68,88 @@ export default function AdminAIProvidersPage() {
   });
 
   /**
-   * Provider type descriptions and default URLs
+   * Parse available models from JSON string (as stored in database)
+   * Returns empty array if null, undefined, or invalid JSON
    */
-  const providerTypes = {
+  const parseAvailableModels = (modelsJson: string | null | undefined): string[] => {
+    if (!modelsJson) return [];
+    try {
+      const parsed = JSON.parse(modelsJson);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+
+  /**
+   * Provider type descriptions, default URLs, and capabilities
+   * Capabilities indicate which AI features the provider supports
+   */
+  const providerTypes: Record<
+    string,
+    {
+      label: string;
+      description: string;
+      defaultUrl: string;
+      requiresKey: boolean;
+      capabilities: string[];
+    }
+  > = {
     openai: {
       label: 'OpenAI',
-      description: 'GPT-4, GPT-3.5-turbo, DALL-E models',
+      description: 'GPT-4, GPT-3.5-turbo, DALL-E, TTS models',
       defaultUrl: 'https://api.openai.com/v1',
       requiresKey: true,
+      capabilities: ['text', 'image', 'tts'],
     },
     anthropic: {
       label: 'Anthropic',
-      description: 'Claude models (Claude-3, etc.)',
+      description: 'Claude models (Claude-3, etc.) - Text only',
       defaultUrl: 'https://api.anthropic.com',
       requiresKey: true,
+      capabilities: ['text'],
     },
     gemini: {
       label: 'Google Gemini',
-      description: 'Gemini Pro models via OpenAI-compatible API',
-      defaultUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+      description: 'Gemini Pro models - Text, Image generation, TTS',
+      defaultUrl: 'https://generativelanguage.googleapis.com/openai/',
       requiresKey: true,
+      capabilities: ['text', 'image', 'tts'],
     },
     ollama: {
       label: 'Ollama',
-      description: 'Local LLM server running on your infrastructure',
-      defaultUrl: 'http://localhost:11434/api',
+      description: 'Local LLM server - Text only (depends on model)',
+      defaultUrl: 'http://localhost:11434/v1',
       requiresKey: false,
+      capabilities: ['text'],
     },
     together: {
       label: 'Together AI',
-      description: 'Open-source models via Together API',
+      description: 'Open-source models - Text, Image generation',
       defaultUrl: 'https://api.together.xyz/v1',
       requiresKey: true,
+      capabilities: ['text', 'image', 'tts'],
     },
     'openai-compatible': {
       label: 'Custom OpenAI-Compatible',
-      description: 'Any OpenAI-compatible API endpoint (LM Studio, vLLM, etc.)',
+      description: 'Any OpenAI-compatible endpoint - capabilities vary',
       defaultUrl: 'http://localhost:8000/v1',
       requiresKey: false,
+      capabilities: ['text', 'image', 'tts'],
+    },
+    fal: {
+      label: 'FAL.ai',
+      description: 'Image generation via FAL API (Ideogram, FLUX, Stable Diffusion)',
+      defaultUrl: 'https://fal.run',
+      requiresKey: true,
+      capabilities: ['image'],
+    },
+    elevenlabs: {
+      label: 'ElevenLabs',
+      description: 'Text-to-speech voice generation API - TTS only',
+      defaultUrl: 'https://api.elevenlabs.io',
+      requiresKey: true,
+      capabilities: ['tts'],
     },
   };
 
@@ -111,7 +159,10 @@ export default function AdminAIProvidersPage() {
    */
   const fetchProviders = async () => {
     try {
-      setLoading(true);
+      // Only show loading message on initial load, not on refresh
+      if (!initialLoadDone) {
+        setLoading(true);
+      }
       setError(null);
       const response = await fetch('/api/admin/settings/ai-providers', {
         method: 'GET',
@@ -132,6 +183,7 @@ export default function AdminAIProvidersPage() {
       console.error('Error fetching providers:', err);
     } finally {
       setLoading(false);
+      setInitialLoadDone(true);
     }
   };
 
@@ -155,7 +207,7 @@ export default function AdminAIProvidersPage() {
     }
 
     try {
-      setLoading(true);
+      setSaving(true);
       setError(null);
 
       const payload = {
@@ -194,7 +246,7 @@ export default function AdminAIProvidersPage() {
       setError(message);
       console.error('Error saving provider:', err);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -203,6 +255,12 @@ export default function AdminAIProvidersPage() {
    * Validates API key and endpoint are working correctly
    */
   const handleTestProvider = async (providerId: string) => {
+    // Prevent duplicate test calls
+    if (testingId === providerId) return;
+
+    // Remove focus from button to prevent visual flicker
+    (document.activeElement as HTMLElement)?.blur();
+
     try {
       setTestingId(providerId);
       setError(null);
@@ -338,15 +396,15 @@ export default function AdminAIProvidersPage() {
     <div className="p-8">
       {/* Header Section */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">AI Provider Configuration</h1>
-        <p className="text-gray-600">
+        <h1 className="text-3xl font-bold mb-2 text-newTextColor">AI Provider Configuration</h1>
+        <p className="text-textItemBlur">
           Manage AI providers, API keys, custom endpoints, and model discovery
         </p>
       </div>
 
       {/* Error Alert */}
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
+        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
           <p className="font-semibold">Error: {error}</p>
         </div>
       )}
@@ -354,7 +412,11 @@ export default function AdminAIProvidersPage() {
       {/* Add Provider Button */}
       {!showAddForm && !editingId && (
         <button
-          onClick={() => setShowAddForm(true)}
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowAddForm(true);
+          }}
           className="mb-6 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
         >
           + Add Provider
@@ -363,15 +425,15 @@ export default function AdminAIProvidersPage() {
 
       {/* Add/Edit Provider Form */}
       {(showAddForm || editingId) && (
-        <div className="mb-8 bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-xl font-bold mb-6">
+        <div className="mb-8 bg-newBgColorInner rounded-lg border border-newBorder p-6">
+          <h2 className="text-xl font-bold mb-6 text-newTextColor">
             {editingId ? 'Edit Provider' : 'Add New Provider'}
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             {/* Provider Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-newTextColor mb-2">
                 Provider Name
               </label>
               <input
@@ -381,13 +443,13 @@ export default function AdminAIProvidersPage() {
                   setFormData({ ...formData, name: e.target.value })
                 }
                 placeholder="e.g., My OpenAI Prod, Test Anthropic"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-newBorder rounded-lg bg-newBgColorInner text-newTextColor focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-textItemBlur"
               />
             </div>
 
             {/* Provider Type */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-newTextColor mb-2">
                 Provider Type
               </label>
               <select
@@ -399,7 +461,7 @@ export default function AdminAIProvidersPage() {
                     baseUrl: '', // Reset URL when changing type
                   })
                 }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-newBorder rounded-lg bg-newBgColorInner text-newTextColor focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {Object.entries(providerTypes).map(([key, config]) => (
                   <option key={key} value={key}>
@@ -410,28 +472,47 @@ export default function AdminAIProvidersPage() {
             </div>
 
             {/* API Key */}
-            {providerTypes[formData.type].requiresKey && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  API Key
-                </label>
-                <input
-                  type="password"
-                  value={formData.apiKey}
-                  onChange={(e) =>
-                    setFormData({ ...formData, apiKey: e.target.value })
-                  }
-                  placeholder="Enter your API key"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            )}
+            <div>
+              <label className="block text-sm font-medium text-newTextColor mb-2">
+                API Key
+                {!providerTypes[formData.type as keyof typeof providerTypes].requiresKey ? (
+                  <span className="text-textItemBlur text-xs font-normal ml-2">(optional)</span>
+                ) : editingId ? (
+                  <span className="text-yellow-500 text-xs font-normal ml-2">(leave empty to keep existing)</span>
+                ) : null}
+              </label>
+              <input
+                type="password"
+                value={formData.apiKey}
+                onChange={(e) =>
+                  setFormData({ ...formData, apiKey: e.target.value })
+                }
+                placeholder={
+                  editingId
+                    ? 'Enter new API key (leave empty to keep existing)'
+                    : providerTypes[formData.type as keyof typeof providerTypes].requiresKey
+                    ? 'Enter your API key'
+                    : 'Enter API key (if required by provider)'
+                }
+                className="w-full px-4 py-2 border border-newBorder rounded-lg bg-newBgColorInner text-newTextColor focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-textItemBlur"
+              />
+              {editingId && (
+                <p className="text-xs text-textItemBlur mt-1">
+                  For security, the existing API key is not displayed. Leave this field empty to keep the current key, or enter a new one to change it.
+                </p>
+              )}
+              {!providerTypes[formData.type as keyof typeof providerTypes].requiresKey && !editingId && (
+                <p className="text-xs text-textItemBlur mt-1">
+                  This provider type doesn't require an API key by default, but you may provide one if needed.
+                </p>
+              )}
+            </div>
 
             {/* Base URL */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-newTextColor mb-2">
                 Base URL{' '}
-                <span className="text-gray-500 text-xs">(optional)</span>
+                <span className="text-textItemBlur text-xs">(optional)</span>
               </label>
               <input
                 type="text"
@@ -442,9 +523,9 @@ export default function AdminAIProvidersPage() {
                 placeholder={
                   providerTypes[formData.type].defaultUrl
                 }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-newBorder rounded-lg bg-newBgColorInner text-newTextColor focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-textItemBlur"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-textItemBlur mt-1">
                 Default: {providerTypes[formData.type].defaultUrl}
               </p>
             </div>
@@ -453,19 +534,26 @@ export default function AdminAIProvidersPage() {
           {/* Form Buttons */}
           <div className="flex gap-3">
             <button
-              onClick={handleSaveProvider}
-              disabled={loading}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:bg-gray-400"
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleSaveProvider();
+              }}
+              disabled={saving}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:bg-newColColor disabled:text-textItemBlur disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              {loading ? 'Saving...' : editingId ? 'Update Provider' : 'Add Provider'}
+              {saving ? 'Saving...' : editingId ? 'Update Provider' : 'Add Provider'}
             </button>
             <button
-              onClick={() => {
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
                 setShowAddForm(false);
                 setEditingId(null);
                 setFormData({ name: '', type: 'openai', apiKey: '', baseUrl: '' });
               }}
-              className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors font-medium"
+              className="px-6 py-2 bg-newColColor text-newTextColor rounded-lg hover:bg-newBoxHover transition-colors font-medium"
             >
               Cancel
             </button>
@@ -476,24 +564,27 @@ export default function AdminAIProvidersPage() {
       {/* Providers List */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {loading && !showAddForm && !editingId ? (
-          <div className="col-span-full p-8 text-center text-gray-500">
+          <div className="col-span-full p-8 text-center text-textItemBlur">
             Loading AI providers...
           </div>
         ) : providers.length === 0 ? (
-          <div className="col-span-full p-8 text-center text-gray-500">
+          <div className="col-span-full p-8 text-center text-textItemBlur">
             No AI providers configured yet. Add one to get started.
           </div>
         ) : (
-          providers.map((provider) => (
+          providers.map((provider) => {
+            const parsedModels = parseAvailableModels(provider.availableModels);
+
+            return (
             <div
               key={provider.id}
-              className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow"
+              className="bg-newBgColorInner rounded-lg border border-newBorder p-6 hover:shadow-md transition-shadow"
             >
               {/* Provider Header */}
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
-                  <h3 className="text-lg font-bold">{provider.name}</h3>
-                  <p className="text-sm text-gray-600">
+                  <h3 className="text-lg font-bold text-newTextColor">{provider.name}</h3>
+                  <p className="text-sm text-textItemBlur">
                     {
                       providerTypes[provider.type as keyof typeof providerTypes]
                         .label
@@ -504,19 +595,19 @@ export default function AdminAIProvidersPage() {
                 {/* Status Badge */}
                 <div className="ml-4">
                   {provider.isDefault ? (
-                    <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
+                    <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-xs font-semibold">
                       Default
                     </span>
                   ) : provider.testStatus === 'success' ? (
-                    <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold">
+                    <span className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-xs font-semibold">
                       Connected
                     </span>
                   ) : provider.testStatus === 'failed' ? (
-                    <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-semibold">
+                    <span className="px-3 py-1 bg-red-500/20 text-red-400 rounded-full text-xs font-semibold">
                       Failed
                     </span>
                   ) : (
-                    <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-semibold">
+                    <span className="px-3 py-1 bg-newColColor text-textItemBlur rounded-full text-xs font-semibold">
                       Not Tested
                     </span>
                   )}
@@ -525,29 +616,29 @@ export default function AdminAIProvidersPage() {
 
               {/* Provider Details */}
               {provider.baseUrl && (
-                <p className="text-xs text-gray-500 mb-3">
+                <p className="text-xs text-textItemBlur mb-3">
                   <span className="font-semibold">Endpoint:</span> {provider.baseUrl}
                 </p>
               )}
 
               {/* Available Models */}
-              {provider.availableModels.length > 0 && (
+              {parsedModels.length > 0 && (
                 <div className="mb-4">
-                  <p className="text-xs font-semibold text-gray-700 mb-2">
-                    Available Models ({provider.availableModels.length}):
+                  <p className="text-xs font-semibold text-newTextColor mb-2">
+                    Available Models ({parsedModels.length}):
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    {provider.availableModels.slice(0, 5).map((model) => (
+                    {parsedModels.slice(0, 5).map((model) => (
                       <span
                         key={model}
-                        className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs"
+                        className="px-2 py-1 bg-newColColor text-textItemBlur rounded text-xs"
                       >
                         {model}
                       </span>
                     ))}
-                    {provider.availableModels.length > 5 && (
-                      <span className="px-2 py-1 text-gray-700 text-xs font-semibold">
-                        +{provider.availableModels.length - 5} more
+                    {parsedModels.length > 5 && (
+                      <span className="px-2 py-1 text-newTextColor text-xs font-semibold">
+                        +{parsedModels.length - 5} more
                       </span>
                     )}
                   </div>
@@ -556,7 +647,7 @@ export default function AdminAIProvidersPage() {
 
               {/* Test Error Message */}
               {provider.testError && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-xs text-red-800">
+                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded text-xs text-red-400">
                   <p className="font-semibold">Test Error:</p>
                   <p>{provider.testError}</p>
                 </div>
@@ -567,25 +658,40 @@ export default function AdminAIProvidersPage() {
                 <div className="flex gap-2">
                   {!provider.isDefault && (
                     <button
-                      onClick={() => handleSetDefault(provider.id)}
-                      className="flex-1 px-3 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors font-medium"
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleSetDefault(provider.id);
+                      }}
+                      className="flex-1 px-3 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-green-500"
                     >
                       Set as Default
                     </button>
                   )}
                   <button
-                    onClick={() => handleTestProvider(provider.id)}
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleTestProvider(provider.id);
+                    }}
                     disabled={testingId === provider.id}
-                    className="flex-1 px-3 py-2 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700 transition-colors font-medium disabled:bg-gray-400"
+                    className="flex-1 px-3 py-2 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700 transition-colors font-medium disabled:bg-newColColor disabled:text-textItemBlur disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-yellow-500"
                   >
                     {testingId === provider.id ? 'Testing...' : 'Test'}
                   </button>
                 </div>
 
                 <button
-                  onClick={() => handleDiscoverModels(provider.id)}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleDiscoverModels(provider.id);
+                  }}
                   disabled={discoveringId === provider.id}
-                  className="w-full px-3 py-2 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 transition-colors font-medium disabled:bg-gray-400"
+                  className="w-full px-3 py-2 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 transition-colors font-medium disabled:bg-newColColor disabled:text-textItemBlur disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
                   {discoveringId === provider.id
                     ? 'Discovering...'
@@ -594,7 +700,10 @@ export default function AdminAIProvidersPage() {
 
                 <div className="flex gap-2">
                   <button
-                    onClick={() => {
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
                       // Pre-populate form with existing provider data for editing
                       setFormData({
                         name: provider.name,
@@ -605,37 +714,43 @@ export default function AdminAIProvidersPage() {
                       setEditingId(provider.id);
                       setShowAddForm(true);
                     }}
-                    className="flex-1 px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors font-medium"
+                    className="flex-1 px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     Edit
                   </button>
                   <button
-                    onClick={() => handleDeleteProvider(provider.id)}
-                    className="flex-1 px-3 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition-colors font-medium"
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleDeleteProvider(provider.id);
+                    }}
+                    className="flex-1 px-3 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-red-500"
                   >
                     Delete
                   </button>
                 </div>
               </div>
             </div>
-          ))
+            );
+          })
         )}
       </div>
 
       {/* Provider Type Reference */}
       {!showAddForm && !editingId && (
-        <div className="mt-12 bg-blue-50 rounded-lg border border-blue-200 p-6">
-          <h3 className="text-lg font-bold mb-4 text-blue-900">
+        <div className="mt-12 bg-blue-500/10 rounded-lg border border-blue-500/20 p-6">
+          <h3 className="text-lg font-bold mb-4 text-blue-400">
             Supported Provider Types
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {Object.entries(providerTypes).map(([key, config]) => (
-              <div key={key} className="bg-white rounded p-4 border border-blue-100">
-                <h4 className="font-bold text-sm mb-1">{config.label}</h4>
-                <p className="text-xs text-gray-600 mb-2">
+              <div key={key} className="bg-newBgColorInner rounded p-4 border border-blue-500/20">
+                <h4 className="font-bold text-sm mb-1 text-newTextColor">{config.label}</h4>
+                <p className="text-xs text-textItemBlur mb-2">
                   {config.description}
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-textItemBlur">
                   <span className="font-semibold">Default URL:</span>{' '}
                   {config.defaultUrl}
                 </p>

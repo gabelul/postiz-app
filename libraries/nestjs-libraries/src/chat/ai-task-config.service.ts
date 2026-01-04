@@ -7,6 +7,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { IAITaskConfig, AITaskType } from './ai-provider-adapter/ai-provider-adapter.interface';
 import { PrismaService } from '../database/prisma/prisma.service';
+import { AIProvider } from '@prisma/client';
+
+/**
+ * AI Provider database record with decrypted API key
+ * For internal use only - never send this to clients
+ */
+export interface DecryptedAIProvider extends Omit<AIProvider, 'apiKey'> {
+  apiKey: string; // decrypted API key
+}
 
 /**
  * Configuration for each task type
@@ -42,6 +51,21 @@ const DEFAULT_TASK_CONFIGS: Record<AITaskType, IAITaskConfig> = {
     fallbackProvider: process.env.AI_AGENT_FALLBACK_PROVIDER || 'openai',
     fallbackModel: process.env.AI_AGENT_FALLBACK_MODEL || 'gpt-4o-mini',
   },
+  // Legacy task types (mapped to 'text' in OpenaiService)
+  smart: {
+    taskType: 'smart',
+    provider: process.env.AI_TEXT_PROVIDER || 'openai',
+    model: process.env.SMART_LLM || 'gpt-4.1',
+    fallbackProvider: process.env.AI_TEXT_FALLBACK_PROVIDER || 'openai',
+    fallbackModel: process.env.AI_TEXT_FALLBACK_MODEL || 'gpt-4o-mini',
+  },
+  fast: {
+    taskType: 'fast',
+    provider: process.env.AI_TEXT_PROVIDER || 'openai',
+    model: process.env.FAST_LLM || 'gpt-4o-mini',
+    fallbackProvider: process.env.AI_TEXT_FALLBACK_PROVIDER || 'openai',
+    fallbackModel: process.env.AI_TEXT_FALLBACK_MODEL || 'gpt-4o-mini',
+  },
 };
 
 @Injectable()
@@ -62,7 +86,7 @@ export class AITaskConfigService {
   /**
    * Load organization-specific configurations from database
    * Caches the result in memory for performance
-   * Stores provider IDs alongside provider types for proper multi-tenant support
+   * Stores provider IDs for precise provider lookup
    * @param organizationId - Organization ID
    */
   async loadOrganizationConfig(organizationId: string): Promise<void> {
@@ -88,19 +112,15 @@ export class AITaskConfigService {
       // Convert database assignments to config format
       for (const assignment of assignments) {
         if (assignment.taskType in configs) {
-          // Store provider type (e.g., 'openai', 'anthropic') but also store the provider ID
-          // in a separate metadata structure for proper provider lookup
+          // Store provider ID for precise lookup, with provider type as fallback
           configs[assignment.taskType as AITaskType] = {
             taskType: assignment.taskType as AITaskType,
-            // Store provider type as the primary provider identifier
-            // In a real-world scenario, you might want to extend IAITaskConfig to include provider IDs
-            provider: assignment.provider.type,
+            provider: assignment.provider.type, // Keep for backward compatibility
+            providerId: assignment.providerId, // New: store provider ID
             model: assignment.model,
-            fallbackProvider: assignment.fallbackProvider?.type,
+            fallbackProvider: assignment.fallbackProvider?.type, // Keep for backward compatibility
+            fallbackProviderId: assignment.fallbackProviderId || undefined, // New: store fallback provider ID
             fallbackModel: assignment.fallbackModel,
-            // Note: Provider ID information is available in the assignment object
-            // but not stored in config - this is by design to maintain backward compatibility
-            // Custom provider handling requires provider lookup by type within an organization
           };
         }
       }
@@ -253,12 +273,12 @@ export class AITaskConfigService {
 
   /**
    * Get the actual provider object for a task (with ID and encrypted key)
-   * Looks up the provider from the database by type and organization
+   * First tries to lookup by providerId (if available), then falls back to type-based lookup
    * @param taskType - The type of task
    * @param organizationId - Organization ID
    * @returns Provider object with ID, encrypted key, and configuration
    */
-  async getTaskProvider(taskType: AITaskType, organizationId: string): Promise<any | null> {
+  async getTaskProvider(taskType: AITaskType, organizationId: string): Promise<AIProvider | null> {
     try {
       // Load organization config if not already cached
       if (!this.orgConfigs.has(organizationId)) {
@@ -271,18 +291,46 @@ export class AITaskConfigService {
         return null;
       }
 
-      // Look up the provider by type in the database
+      // First try to lookup by provider ID (if available in config)
+      // This ensures the exact provider selected in the UI is used
+      if (config.providerId) {
+        const provider = await this._prisma.aIProvider.findFirst({
+          where: {
+            id: config.providerId,
+            organizationId,
+            deletedAt: null,
+            enabled: true, // Only return enabled providers
+          },
+        });
+
+        if (provider) {
+          return provider;
+        }
+
+        // Provider ID was specified but not found (maybe deleted or disabled?)
+        this.logger.warn(
+          `Provider with ID ${config.providerId} not found or not enabled for organization ${organizationId}, falling back to type-based lookup`
+        );
+      }
+
+      // Fall back to type-based lookup for backward compatibility
+      // Order by isDefault DESC to prefer the default provider, then by creation date
       const provider = await this._prisma.aIProvider.findFirst({
         where: {
           organizationId,
           type: config.provider,
           deletedAt: null,
+          enabled: true, // Only return enabled providers
         },
+        orderBy: [
+          { isDefault: 'desc' }, // Prefer default providers
+          { createdAt: 'desc' }, // Then use newer providers
+        ],
       });
 
       if (!provider) {
         this.logger.warn(
-          `No provider of type ${config.provider} found for organization ${organizationId}`
+          `No enabled provider of type ${config.provider} found for organization ${organizationId}`
         );
         return null;
       }
@@ -298,11 +346,12 @@ export class AITaskConfigService {
 
   /**
    * Get the fallback provider object for a task
+   * First tries to lookup by fallbackProviderId (if available), then falls back to type-based lookup
    * @param taskType - The type of task
    * @param organizationId - Organization ID
    * @returns Fallback provider object or null
    */
-  async getTaskFallbackProvider(taskType: AITaskType, organizationId: string): Promise<any | null> {
+  async getTaskFallbackProvider(taskType: AITaskType, organizationId: string): Promise<AIProvider | null> {
     try {
       // Load organization config if not already cached
       if (!this.orgConfigs.has(organizationId)) {
@@ -310,17 +359,48 @@ export class AITaskConfigService {
       }
 
       const config = this.getTaskConfig(taskType, organizationId);
-      if (!config || !config.fallbackProvider) {
+      if (!config) {
         return null;
       }
 
-      // Look up the fallback provider by type
+      // First try to lookup by fallback provider ID (if available)
+      if (config.fallbackProviderId) {
+        const fallbackProvider = await this._prisma.aIProvider.findFirst({
+          where: {
+            id: config.fallbackProviderId,
+            organizationId,
+            deletedAt: null,
+            enabled: true, // Only return enabled providers
+          },
+        });
+
+        if (fallbackProvider) {
+          return fallbackProvider;
+        }
+
+        // Fallback provider ID was specified but not found (maybe deleted or disabled?)
+        this.logger.warn(
+          `Fallback provider with ID ${config.fallbackProviderId} not found or not enabled for organization ${organizationId}, falling back to type-based lookup`
+        );
+      }
+
+      // Fall back to type-based lookup for backward compatibility
+      if (!config.fallbackProvider) {
+        return null;
+      }
+
+      // Order by isDefault DESC to prefer the default provider, then by creation date
       const fallbackProvider = await this._prisma.aIProvider.findFirst({
         where: {
           organizationId,
           type: config.fallbackProvider,
           deletedAt: null,
+          enabled: true, // Only return enabled providers
         },
+        orderBy: [
+          { isDefault: 'desc' }, // Prefer default providers
+          { createdAt: 'desc' }, // Then use newer providers
+        ],
       });
 
       return fallbackProvider || null;

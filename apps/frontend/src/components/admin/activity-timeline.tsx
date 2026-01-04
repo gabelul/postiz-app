@@ -49,48 +49,50 @@ export function ActivityTimeline({
 
   /**
    * Get action display text with color
+   * Uses opacity-based colors for dark mode compatibility
    */
   const getActionDisplay = (action: string) => {
     const actionMap: Record<string, { text: string; color: string }> = {
-      USER_PROMOTE: { text: 'Promoted User', color: 'text-green-600' },
-      USER_DEMOTE: { text: 'Demoted User', color: 'text-orange-600' },
-      USER_SET_QUOTAS: { text: 'Updated User Quotas', color: 'text-blue-600' },
-      ORG_SET_TIER: { text: 'Changed Tier', color: 'text-purple-600' },
-      ORG_SET_LIMITS: { text: 'Updated Limits', color: 'text-blue-600' },
-      ORG_BYPASS_BILLING: { text: 'Updated Billing', color: 'text-yellow-600' },
-      SETTING_UPDATE: { text: 'Updated Setting', color: 'text-gray-600' },
-      AI_PROVIDER_CREATE: { text: 'Added AI Provider', color: 'text-green-600' },
-      AI_PROVIDER_DELETE: { text: 'Removed AI Provider', color: 'text-red-600' },
+      USER_PROMOTE: { text: 'Promoted User', color: 'text-green-500' },
+      USER_DEMOTE: { text: 'Demoted User', color: 'text-orange-500' },
+      USER_SET_QUOTAS: { text: 'Updated User Quotas', color: 'text-blue-500' },
+      ORG_SET_TIER: { text: 'Changed Tier', color: 'text-purple-500' },
+      ORG_SET_LIMITS: { text: 'Updated Limits', color: 'text-blue-500' },
+      ORG_BYPASS_BILLING: { text: 'Updated Billing', color: 'text-yellow-500' },
+      SETTING_UPDATE: { text: 'Updated Setting', color: 'text-gray-400' },
+      AI_PROVIDER_CREATE: { text: 'Added AI Provider', color: 'text-green-500' },
+      AI_PROVIDER_DELETE: { text: 'Removed AI Provider', color: 'text-red-500' },
     };
     return (
-      actionMap[action] || { text: action, color: 'text-gray-600' }
+      actionMap[action] || { text: action, color: 'text-gray-400' }
     );
   };
 
   /**
    * Get entity type icon/color
+   * Uses opacity-based backgrounds for dark mode compatibility
    */
   const getEntityDisplay = (entityType: string) => {
     const entityMap: Record<string, { text: string; bg: string }> = {
-      USER: { text: 'User', bg: 'bg-blue-100 text-blue-800' },
-      ORGANIZATION: { text: 'Org', bg: 'bg-purple-100 text-purple-800' },
-      SETTING: { text: 'Setting', bg: 'bg-gray-100 text-gray-800' },
-      AI_PROVIDER: { text: 'AI', bg: 'bg-green-100 text-green-800' },
+      USER: { text: 'User', bg: 'bg-blue-500/20 text-blue-400' },
+      ORGANIZATION: { text: 'Org', bg: 'bg-purple-500/20 text-purple-400' },
+      SETTING: { text: 'Setting', bg: 'bg-gray-500/20 text-gray-400' },
+      AI_PROVIDER: { text: 'AI', bg: 'bg-green-500/20 text-green-400' },
     };
-    return entityMap[entityType] || { text: entityType, bg: 'bg-gray-50 text-gray-600' };
+    return entityMap[entityType] || { text: entityType, bg: 'bg-gray-500/10 text-gray-400' };
   };
 
   if (isLoading) {
     return (
-      <div className={`bg-white rounded-lg border border-gray-200 p-6 ${className}`}>
-        <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
+      <div className={`bg-newBgColorInner rounded-lg border border-newBorder p-6 ${className}`}>
+        <h3 className="text-lg font-semibold mb-4 text-newTextColor">Recent Activity</h3>
         <div className="space-y-4">
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-gray-300 rounded-full mt-2 animate-pulse" />
+              <div className="w-2 h-2 bg-newColColor rounded-full mt-2 animate-pulse" />
               <div className="flex-1">
-                <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse mb-2" />
-                <div className="h-3 bg-gray-100 rounded w-1/2 animate-pulse" />
+                <div className="h-4 bg-newColColor rounded w-3/4 animate-pulse mb-2" />
+                <div className="h-3 bg-newColColor/50 rounded w-1/2 animate-pulse" />
               </div>
             </div>
           ))}
@@ -101,14 +103,14 @@ export function ActivityTimeline({
 
   if (error) {
     return (
-      <div className={`bg-white rounded-lg border border-gray-200 p-6 ${className}`}>
-        <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
-        <p className="text-gray-500 text-sm">
+      <div className={`bg-newBgColorInner rounded-lg border border-newBorder p-6 ${className}`}>
+        <h3 className="text-lg font-semibold mb-4 text-newTextColor">Recent Activity</h3>
+        <p className="text-textItemBlur text-sm">
           Failed to load activity.{' '}
           {onRetry ? (
             <button
               onClick={onRetry}
-              className="text-blue-600 hover:underline"
+              className="text-blue-500 hover:underline"
               aria-label="Retry loading activity"
             >
               Retry
@@ -116,7 +118,7 @@ export function ActivityTimeline({
           ) : (
             <button
               onClick={() => window.location.reload()}
-              className="text-blue-600 hover:underline"
+              className="text-blue-500 hover:underline"
               aria-label="Reload page to retry loading activity"
             >
               Reload Page
@@ -129,16 +131,16 @@ export function ActivityTimeline({
 
   if (!activities || activities.length === 0) {
     return (
-      <div className={`bg-white rounded-lg border border-gray-200 p-6 ${className}`}>
-        <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
-        <p className="text-gray-500 text-sm">No recent activity to display.</p>
+      <div className={`bg-newBgColorInner rounded-lg border border-newBorder p-6 ${className}`}>
+        <h3 className="text-lg font-semibold mb-4 text-newTextColor">Recent Activity</h3>
+        <p className="text-textItemBlur text-sm">No recent activity to display.</p>
       </div>
     );
   }
 
   return (
-    <div className={`bg-white rounded-lg border border-gray-200 p-6 ${className}`}>
-      <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
+    <div className={`bg-newBgColorInner rounded-lg border border-newBorder p-6 ${className}`}>
+      <h3 className="text-lg font-semibold mb-4 text-newTextColor">Recent Activity</h3>
       <div className="space-y-4">
         {activities.map((activity, index) => {
           const actionDisplay = getActionDisplay(activity.action);
@@ -150,7 +152,7 @@ export function ActivityTimeline({
               <div className="relative">
                 <div className="w-2 h-2 bg-blue-500 rounded-full mt-2" />
                 {index < activities.length - 1 && (
-                  <div className="absolute top-4 left-1 w-0.5 h-8 bg-gray-200" />
+                  <div className="absolute top-4 left-1 w-0.5 h-8 bg-newBorder" />
                 )}
               </div>
 
@@ -171,17 +173,17 @@ export function ActivityTimeline({
                 </div>
 
                 {/* Entity name */}
-                <p className="text-sm text-gray-700 truncate mt-1">
+                <p className="text-sm text-newTextColor truncate mt-1">
                   {activity.entityName}
                 </p>
 
                 {/* Admin and time */}
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-textItemBlur">
                     by {activity.adminEmail}
                   </span>
-                  <span className="text-gray-300">•</span>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-textItemBlur/50">•</span>
+                  <span className="text-xs text-textItemBlur">
                     {dayjs(activity.createdAt).fromNow()}
                   </span>
                 </div>
@@ -215,15 +217,15 @@ export function CompactActivityTimeline({ className = '' }: { className?: string
   return (
     <div className={className}>
       <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-medium text-gray-600">Recent Activity</span>
-        <span className="text-xs text-gray-500">{activities.length} items</span>
+        <span className="text-xs font-medium text-newTextColor">Recent Activity</span>
+        <span className="text-xs text-textItemBlur">{activities.length} items</span>
       </div>
-      <p className="text-sm text-gray-700 truncate">
+      <p className="text-sm text-newTextColor truncate">
         <span className="font-medium">{actionDisplay}</span> - {latest.entityName}
       </p>
-      <p className="text-xs text-gray-500 mt-1">
+      <p className="text-xs text-textItemBlur mt-1">
         {dayjs(latest.createdAt).fromNow()}
       </p>
-    </div>
+    </div  >
   );
 }

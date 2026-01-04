@@ -365,31 +365,31 @@ export default function BulkOperationsPage() {
     <div className="p-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Bulk Operations</h1>
-        <p className="text-gray-600">
+        <h1 className="text-3xl font-bold mb-2 text-newTextColor">Bulk Operations</h1>
+        <p className="text-textItemBlur">
           Perform administrative operations on multiple users or organizations at once
         </p>
       </div>
 
       {/* CSV Import/Export Section */}
-      <section className="mb-8 bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-          <FileUp className="w-5 h-5 text-blue-600" />
+      <section className="mb-8 bg-newBgColorInner rounded-lg border border-newBorder p-6">
+        <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-newTextColor">
+          <FileUp className="w-5 h-5 text-blue-500" />
           CSV Import / Export
         </h2>
-        <p className="text-gray-600 mb-4">
+        <p className="text-textItemBlur mb-4">
           Import users in bulk from a CSV file or export existing users to CSV.
         </p>
 
         {/* CSV Format Info */}
-        <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-          <h3 className="font-semibold text-sm text-gray-700 mb-2">
+        <div className="mb-4 p-4 bg-newColColor rounded-lg">
+          <h3 className="font-semibold text-sm text-newTextColor mb-2">
             Expected CSV Format:
           </h3>
-          <code className="text-sm bg-gray-200 px-2 py-1 rounded">
+          <code className="text-sm bg-newBgColorInner px-2 py-1 rounded text-textItemBlur">
             email,name,isSuperAdmin,customQuotas
           </code>
-          <p className="text-xs text-gray-600 mt-2">
+          <p className="text-xs text-textItemBlur mt-2">
             Only <strong>email</strong> is required. customQuotas should be a JSON string.
           </p>
         </div>
@@ -403,14 +403,14 @@ export default function BulkOperationsPage() {
               accept=".csv,text/csv"
               onChange={handleFileUpload}
               disabled={operation.inProgress}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-2 border border-newBorder rounded-lg bg-newBgColorInner text-newTextColor focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="Upload CSV file"
             />
           </div>
           <button
             onClick={handleBulkImport}
             disabled={!csvContent || operation.inProgress}
-            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-newColColor disabled:text-textItemBlur disabled:cursor-not-allowed transition-colors"
             aria-label="Import users from CSV"
           >
             <Upload className="w-4 h-4" />
@@ -421,7 +421,7 @@ export default function BulkOperationsPage() {
           <button
             onClick={handleBulkExport}
             disabled={operation.inProgress}
-            className="flex items-center gap-2 px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-2 px-6 py-2 bg-newColColor text-newTextColor rounded-lg hover:bg-newBoxHover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             aria-label="Export users to CSV"
           >
             <Download className="w-4 h-4" />
@@ -433,22 +433,22 @@ export default function BulkOperationsPage() {
 
         {/* File info */}
         {csvContent && (
-          <div className="mt-3 text-sm text-gray-600">
+          <div className="mt-3 text-sm text-textItemBlur">
             Selected: {csvContent.split('\n').length} rows
           </div>
         )}
       </section>
 
       {/* Quick User Operations Section */}
-      <section className="mb-8 bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-xl font-bold mb-4">Quick Bulk User Operations</h2>
-        <p className="text-gray-600 mb-4">
+      <section className="mb-8 bg-newBgColorInner rounded-lg border border-newBorder p-6">
+        <h2 className="text-xl font-bold mb-4 text-newTextColor">Quick Bulk User Operations</h2>
+        <p className="text-textItemBlur mb-4">
           Select user IDs below to perform bulk operations (max 100 users at once).
         </p>
 
         {/* User ID Input */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-newTextColor mb-1">
             User IDs (comma-separated, max 100)
           </label>
           <textarea
@@ -462,11 +462,11 @@ export default function BulkOperationsPage() {
             }}
             disabled={operation.inProgress}
             rows={3}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed font-mono text-sm"
+            className="w-full px-4 py-2 border border-newBorder rounded-lg bg-newBgColorInner text-newTextColor focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed font-mono text-sm placeholder:text-textItemBlur"
             placeholder="user-id-1, user-id-2, user-id-3..."
             aria-label="Enter user IDs for bulk operations"
           />
-          <div className="mt-1 text-sm text-gray-600">
+          <div className="mt-1 text-sm text-textItemBlur">
             {selectedUserIds.size} user{selectedUserIds.size !== 1 ? 's' : ''} selected
           </div>
         </div>
@@ -476,7 +476,7 @@ export default function BulkOperationsPage() {
           <button
             onClick={handleBulkPromote}
             disabled={selectedUserIds.size === 0 || operation.inProgress}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-newColColor disabled:text-textItemBlur disabled:cursor-not-allowed transition-colors"
             aria-label="Bulk promote users to superAdmin"
           >
             Promote to SuperAdmin
@@ -484,7 +484,7 @@ export default function BulkOperationsPage() {
           <button
             onClick={handleBulkDemote}
             disabled={selectedUserIds.size === 0 || operation.inProgress}
-            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-newColColor disabled:text-textItemBlur disabled:cursor-not-allowed transition-colors"
             aria-label="Bulk demote users from superAdmin"
           >
             Demote from SuperAdmin
@@ -492,7 +492,7 @@ export default function BulkOperationsPage() {
           <button
             onClick={() => setSelectedUserIds(new Set())}
             disabled={operation.inProgress}
-            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-4 py-2 text-newTextColor hover:bg-newBoxHover rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             aria-label="Clear user selection"
           >
             Clear Selection
@@ -501,15 +501,15 @@ export default function BulkOperationsPage() {
       </section>
 
       {/* Quick Organization Operations Section */}
-      <section className="mb-8 bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-xl font-bold mb-4">Quick Bulk Organization Operations</h2>
-        <p className="text-gray-600 mb-4">
+      <section className="mb-8 bg-newBgColorInner rounded-lg border border-newBorder p-6">
+        <h2 className="text-xl font-bold mb-4 text-newTextColor">Quick Bulk Organization Operations</h2>
+        <p className="text-textItemBlur mb-4">
           Select organization IDs below to perform bulk operations (max 100 organizations at once).
         </p>
 
         {/* Organization ID Input */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-newTextColor mb-1">
             Organization IDs (comma-separated, max 100)
           </label>
           <textarea
@@ -523,18 +523,18 @@ export default function BulkOperationsPage() {
             }}
             disabled={operation.inProgress}
             rows={3}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed font-mono text-sm"
+            className="w-full px-4 py-2 border border-newBorder rounded-lg bg-newBgColorInner text-newTextColor focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed font-mono text-sm placeholder:text-textItemBlur"
             placeholder="org-id-1, org-id-2, org-id-3..."
             aria-label="Enter organization IDs for bulk operations"
           />
-          <div className="mt-1 text-sm text-gray-600">
+          <div className="mt-1 text-sm text-textItemBlur">
             {selectedOrgIds.size} organization{selectedOrgIds.size !== 1 ? 's' : ''} selected
           </div>
         </div>
 
         {/* Set Tier */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-newTextColor mb-1">
             Subscription Tier
           </label>
           <div className="flex flex-wrap gap-2">
@@ -546,7 +546,7 @@ export default function BulkOperationsPage() {
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   selectedTier === tier.value
                     ? tier.color
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'bg-newColColor text-textItemBlur hover:bg-newBoxHover'
                 } disabled:opacity-50 disabled:cursor-not-allowed`}
                 aria-label={`Set tier to ${tier.label}`}
               >
@@ -558,7 +558,7 @@ export default function BulkOperationsPage() {
 
         {/* Set Limits */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-newTextColor mb-1">
             Custom Limits (JSON format)
           </label>
           <input
@@ -573,11 +573,11 @@ export default function BulkOperationsPage() {
               }
             }}
             disabled={operation.inProgress}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed font-mono text-sm"
+            className="w-full px-4 py-2 border border-newBorder rounded-lg bg-newBgColorInner text-newTextColor focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed font-mono text-sm placeholder:text-textItemBlur"
             placeholder='{"posts_per_month": 500}'
             aria-label="Enter custom limits as JSON"
           />
-          <p className="text-xs text-gray-600 mt-1">
+          <p className="text-xs text-textItemBlur mt-1">
             Example: {`{"posts_per_month": 500, "channels": 10}`}
           </p>
         </div>
@@ -587,7 +587,7 @@ export default function BulkOperationsPage() {
           <button
             onClick={handleBulkSetTier}
             disabled={selectedOrgIds.size === 0 || operation.inProgress}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-newColColor disabled:text-textItemBlur disabled:cursor-not-allowed transition-colors"
             aria-label="Bulk set organization tier"
           >
             Set Tier ({selectedTier})
@@ -595,7 +595,7 @@ export default function BulkOperationsPage() {
           <button
             onClick={handleBulkSetLimits}
             disabled={selectedOrgIds.size === 0 || operation.inProgress}
-            className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:bg-newColColor disabled:text-textItemBlur disabled:cursor-not-allowed transition-colors"
             aria-label="Bulk set organization limits"
           >
             Set Limits
@@ -603,7 +603,7 @@ export default function BulkOperationsPage() {
           <button
             onClick={() => setSelectedOrgIds(new Set())}
             disabled={operation.inProgress}
-            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-4 py-2 text-newTextColor hover:bg-newBoxHover rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             aria-label="Clear organization selection"
           >
             Clear Selection
@@ -619,37 +619,37 @@ export default function BulkOperationsPage() {
           aria-modal
           aria-labelledby="operation-result-title"
         >
-          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
+          <div className="bg-newBgColorInner rounded-lg shadow-xl max-w-lg w-full p-6 border border-newBorder">
             <div className="flex items-start justify-between mb-4">
               <h3
                 id="operation-result-title"
-                className="text-lg font-bold flex items-center gap-2"
+                className="text-lg font-bold flex items-center gap-2 text-newTextColor"
               >
                 {operation.error ? (
                   <>
-                    <XCircle className="w-5 h-5 text-red-600" />
+                    <XCircle className="w-5 h-5 text-red-500" />
                     Operation Failed
                   </>
                 ) : (
                   <>
-                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <CheckCircle className="w-5 h-5 text-green-500" />
                     Operation Complete
                   </>
                 )}
               </h3>
               <button
                 onClick={closeOperationModal}
-                className="p-1 hover:bg-gray-100 rounded-lg"
+                className="p-1 hover:bg-newBoxHover rounded-lg"
                 aria-label="Close modal"
               >
-                <X className="w-5 h-5 text-gray-500" />
+                <X className="w-5 h-5 text-textItemBlur" />
               </button>
             </div>
 
             {operation.error ? (
-              <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <p className="text-red-800">{operation.error}</p>
+              <div className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <p className="text-red-400">{operation.error}</p>
               </div>
             ) : (
               renderOperationResult()
@@ -675,9 +675,9 @@ export default function BulkOperationsPage() {
           aria-live="polite"
           aria-busy
         >
-          <div className="bg-white rounded-lg shadow-xl p-6 flex items-center gap-4">
-            <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-            <span className="font-medium">Processing operation...</span>
+          <div className="bg-newBgColorInner rounded-lg shadow-xl p-6 flex items-center gap-4 border border-newBorder">
+            <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            <span className="font-medium text-newTextColor">Processing operation...</span>
           </div>
         </div>
       )}

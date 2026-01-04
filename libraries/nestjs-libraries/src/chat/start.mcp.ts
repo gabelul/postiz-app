@@ -8,19 +8,17 @@ import { runWithContext } from './async.storage';
 
 /**
  * Start the MCP (Model Context Protocol) server
- * Skips initialization if DISABLE_MASTRA is set to true
  */
 export const startMcp = async (app: INestApplication) => {
-  // Check if Mastra is disabled
-  if (process.env.DISABLE_MASTRA === 'true') {
-    Logger.log('MCP server disabled (DISABLE_MASTRA=true)');
-    return;
-  }
-
   const mastraService = app.get(MastraService, { strict: false });
   const organizationService = app.get(OrganizationService, { strict: false });
 
   const mastra = await mastraService.mastra();
+  if (!mastra) {
+    Logger.log('MCP server disabled (Mastra not available)');
+    return;
+  }
+
   const agent = mastra.getAgent('postiz');
   const tools = await agent.getTools();
 

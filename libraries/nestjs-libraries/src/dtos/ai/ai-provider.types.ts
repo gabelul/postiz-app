@@ -13,7 +13,9 @@ export type AIProviderType =
   | 'gemini'
   | 'ollama'
   | 'together'
-  | 'openai-compatible';
+  | 'openai-compatible'
+  | 'fal'
+  | 'elevenlabs';
 
 /**
  * Task types that can be assigned to different AI providers
@@ -330,6 +332,18 @@ export const DEFAULT_MODELS: Record<AIProviderType, string[]> = {
     'mistralai/Mixtral-8x22B-Instruct',
   ],
   'openai-compatible': [],
+  fal: [
+    'ideogram/v2',
+    'fast-sdxl',
+    'fast-flux',
+    'flux-pro',
+    'stable-diffusion-v3',
+  ],
+  elevenlabs: [
+    'eleven_multilingual_v2',
+    'eleven_turbo_v2',
+    'eleven_monolingual_v1',
+  ],
 };
 
 /**

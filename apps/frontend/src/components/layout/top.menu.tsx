@@ -13,6 +13,12 @@ interface MenuItemInterface {
   role?: string[];
   hide?: boolean;
   requireBilling?: boolean;
+  /**
+   * When true, this item requires system superAdmin privileges (user.admin flag)
+   * This is distinct from organization roles (user.role) to avoid conflating
+   * system-level admin status with organization membership roles.
+   */
+  requireAdmin?: boolean;
 }
 
 export const useMenuItem = () => {
@@ -156,6 +162,9 @@ export const useMenuItem = () => {
        * - System settings
        * - AI provider configuration
        * - Feature flags
+       *
+       * Uses requireAdmin flag to check system-level superAdmin status (user.admin)
+       * rather than organization role, avoiding conflation with org membership roles.
        */
       name: 'Admin',
       icon: (
@@ -176,7 +185,7 @@ export const useMenuItem = () => {
         </svg>
       ),
       path: '/admin',
-      role: ['SUPERADMIN'],
+      requireAdmin: true,
     },
     {
       name: t('affiliate', 'Affiliate'),
@@ -320,6 +329,10 @@ export const TopMenu: FC = () => {
                 if (f.name === 'Billing' && user?.isLifetime) {
                   return false;
                 }
+                // Check requireAdmin flag for system superAdmin privileges
+                if (f.requireAdmin && !user?.admin) {
+                  return false;
+                }
                 if (f.role) {
                   return f.role.includes(user?.role!);
                 }
@@ -345,6 +358,10 @@ export const TopMenu: FC = () => {
               return false;
             }
             if (f.name === 'Billing' && user?.isLifetime) {
+              return false;
+            }
+            // Check requireAdmin flag for system superAdmin privileges
+            if (f.requireAdmin && !user?.admin) {
               return false;
             }
             if (f.role) {

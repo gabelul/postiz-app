@@ -13,7 +13,8 @@ import { parseBuffer } from 'music-metadata';
 import { stringifySync } from 'subtitle';
 
 import pLimit from 'p-limit';
-import { FalService } from '@gitroom/nestjs-libraries/openai/fal.service';
+import { ImageGenerationService } from '@gitroom/nestjs-libraries/openai/image-generation.service';
+import { TTSService } from '@gitroom/nestjs-libraries/openai/tts.service';
 import { IsString } from 'class-validator';
 import { JSONSchema } from 'class-validator-jsonschema';
 const limit = pLimit(2);
@@ -62,91 +63,121 @@ export class ImagesSlides extends VideoAbstract<ImagesSlidesParams> {
   private storage = UploadFactory.createStorage();
   constructor(
     private _openaiService: OpenaiService,
-    private _falService: FalService
+    private _imageGenerationService: ImageGenerationService,
+    private _ttsService: TTSService
   ) {
     super();
   }
 
+  /**
+   * Process video slides generation from text
+   * @param output - Video orientation (vertical or horizontal)
+   * @param customParams - Slide parameters (prompt and voice)
+   * @param organizationId - Organization ID for AI provider selection
+   * @returns URL of the generated video
+   */
   async process(
     output: 'vertical' | 'horizontal',
-    customParams: ImagesSlidesParams
+    customParams: ImagesSlidesParams,
+    organizationId?: string
   ): Promise<URL> {
     const list = await this._openaiService.generateSlidesFromText(
-      customParams.prompt
+      customParams.prompt,
+      organizationId
     );
 
-    const generated = await Promise.all(
-      list.reduce((all, current) => {
-        all.push(
-          new Promise(async (res) => {
-            res({
+    // Enforce maximum slide count to prevent unbounded operations
+    const maxSlides = 5;
+    const slidesToProcess = list.slice(0, maxSlides);
+
+    if (list.length > maxSlides) {
+      console.warn(`LLM returned ${list.length} slides, limiting to ${maxSlides} for performance and cost reasons`);
+    }
+
+    // Generate images and audio for each slide in parallel
+    // This significantly improves performance compared to sequential processing
+    const slidePromises = slidesToProcess.map(async (current, index) => {
+      // Generate image and audio in parallel for each slide
+      const [imageResult, audioBuffer] = await Promise.all([
+        // Image generation
+        (async () => {
+          try {
+            return {
               len: 0,
-              url: await this._falService.generateImageFromText(
-                'ideogram/v2',
+              url: await this._imageGenerationService.generateImage(
                 current.imagePrompt,
-                output === 'vertical'
+                organizationId, // Pass undefined (not empty string) for env fallback
+                {
+                  isUrl: true,
+                  isVertical: output === 'vertical',
+                  model: 'ideogram/v2', // Default model, will be overridden by provider config
+                }
               ),
-            });
-          })
-        );
-
-        all.push(
-          new Promise(async (res) => {
-            const buffer = Buffer.from(
-              await (
-                await limit(() =>
-                  fetch(
-                    `https://api.elevenlabs.io/v1/text-to-speech/${customParams.voice}?output_format=mp3_44100_128`,
-                    {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                        'xi-api-key': process.env.ELEVENSLABS_API_KEY || '',
-                      },
-                      body: JSON.stringify({
-                        text: current.voiceText,
-                        model_id: 'eleven_multilingual_v2',
-                      }),
-                    }
-                  )
-                )
-              ).arrayBuffer()
+            };
+          } catch (error) {
+            throw new Error(`Failed to generate image for slide: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          }
+        })(),
+        // Audio generation with concurrency limiting
+        (async () => {
+          try {
+            return await limit(() =>
+              this._ttsService.generateAudio(
+                current.voiceText,
+                customParams.voice,
+                organizationId // Pass undefined (not empty string) for env fallback
+              )
             );
+          } catch (error) {
+            throw new Error(`Failed to generate audio for slide: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          }
+        })(),
+      ]);
 
-            const { path } = await this.storage.uploadFile({
-              buffer,
-              mimetype: 'audio/mp3',
-              size: buffer.length,
-              path: '',
-              fieldname: '',
-              destination: '',
-              stream: new Readable(),
-              filename: '',
-              originalname: '',
-              encoding: '',
-            });
+      // Upload audio to storage
+      const { path } = await this.storage.uploadFile({
+        buffer: audioBuffer,
+        mimetype: 'audio/mp3',
+        size: audioBuffer.length,
+        path: '',
+        fieldname: '',
+        destination: '',
+        stream: new Readable(),
+        filename: '',
+        originalname: '',
+        encoding: '',
+      });
 
-            res({
-              len: await getAudioDuration(buffer),
-              url:
-                path.indexOf('http') === -1
-                  ? process.env.FRONTEND_URL +
-                    '/' +
-                    process.env.NEXT_PUBLIC_UPLOAD_STATIC_DIRECTORY +
-                    path
-                  : path,
-            });
-          })
-        );
+      return {
+        image: imageResult,
+        audio: {
+          len: await getAudioDuration(audioBuffer),
+          url:
+            path.indexOf('http') === -1
+              ? process.env.FRONTEND_URL +
+                '/' +
+                process.env.NEXT_PUBLIC_UPLOAD_STATIC_DIRECTORY +
+                path
+              : path,
+        },
+      };
+    });
 
-        return all;
-      }, [] as Promise<any>[])
-    );
+    // Wait for all slides to complete processing
+    const slideResults = await Promise.all(slidePromises);
+
+    // Flatten results into the format expected by downstream code
+    const allPromises: Array<{ len: number; url: string }> = [];
+    for (const result of slideResults) {
+      allPromises.push(result.image, result.audio);
+    }
+
+    const generated = allPromises;
 
     const split = chunk(generated, 2);
 
     const srt = stringifySync(
-      list
+      slidesToProcess
         .reduce((all, current, index) => {
           const start = all.length ? all[all.length - 1].end : 0;
           const end = start + split[index][1].len * 1000 + 1000;
@@ -164,8 +195,6 @@ export class ImagesSlides extends VideoAbstract<ImagesSlidesParams> {
         })),
       { format: 'SRT' }
     );
-
-    console.log(split);
 
     const { results } = await transloadit.createAssembly({
       uploads: {
@@ -242,22 +271,16 @@ export class ImagesSlides extends VideoAbstract<ImagesSlidesParams> {
 
   @ExposeVideoFunction()
   async loadVoices(data: any) {
-    const { voices } = await (
-      await fetch(
-        'https://api.elevenlabs.io/v2/voices?page_size=40&category=premade',
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'xi-api-key': process.env.ELEVENSLABS_API_KEY || '',
-          },
-        }
-      )
-    ).json();
+    // Extract organizationId from data if available for provider-aware voice lookup
+    const organizationId = data?.organizationId;
+
+    // Use TTS service for provider-aware voice listing
+    // Returns voices from the configured provider (OpenAI, ElevenLabs, etc.)
+    const voices = await this._ttsService.getVoices(organizationId || '');
 
     return {
-      voices: voices.map((voice: any) => ({
-        id: voice.voice_id,
+      voices: voices.map((voice) => ({
+        id: voice.id,
         name: voice.name,
         preview_url: voice.preview_url,
       })),
