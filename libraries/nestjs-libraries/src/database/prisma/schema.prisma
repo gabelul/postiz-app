@@ -728,6 +728,10 @@ model AIProvider {
 /**
  * AI Task Assignment
  * Maps each task type (image, text, video, agent) to a provider and model
+ *
+ * Supports two strategies:
+ * - fallback: Primary provider with optional fallback
+ * - round-robin: Multiple providers that rotate in order
  */
 model AITaskAssignment {
   id                   String      @id @default(uuid())
@@ -737,15 +741,22 @@ model AITaskAssignment {
   // Task identification
   taskType             String      // image, text, video-slides, agent
 
-  // Primary provider and model
+  // Strategy selection
+  strategy             String      @default("fallback") // 'fallback' or 'round-robin'
+
+  // Primary provider and model (used for both strategies)
   providerId           String
   provider             AIProvider  @relation(fields: [providerId], references: [id])
   model                String      // Model name (e.g., dall-e-3, gpt-4.1, claude-3-opus)
 
-  // Fallback provider and model (optional)
+  // Fallback provider and model (only for fallback strategy)
   fallbackProviderId   String?
   fallbackProvider     AIProvider? @relation("fallbackProvider", fields: [fallbackProviderId], references: [id])
   fallbackModel        String?     // Fallback model name
+
+  // Round-robin providers (only for round-robin strategy)
+  // JSON array of [{providerId, model}, ...] for rotation
+  roundRobinProviders  String?     // JSON string storing multiple provider/model pairs
 
   createdAt            DateTime    @default(now())
   updatedAt            DateTime    @updatedAt
@@ -753,6 +764,7 @@ model AITaskAssignment {
   @@unique([organizationId, taskType])
   @@index([organizationId])
   @@index([taskType])
+  @@index([strategy])
 }
 
 // Mastra AI Models (from upstream)

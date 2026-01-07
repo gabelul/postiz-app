@@ -87,6 +87,22 @@ export interface IAITaskConfig {
    * Fallback model if primary unavailable
    */
   fallbackModel?: string;
+
+  /**
+   * Provider selection strategy
+   * - 'fallback': Use primary provider, fall back to fallback if primary fails
+   * - 'round-robin': Rotate through multiple providers in order
+   */
+  strategy?: 'fallback' | 'round-robin';
+
+  /**
+   * Providers for round-robin rotation
+   * Only used when strategy is 'round-robin'
+   */
+  roundRobinProviders?: Array<{
+    providerId: string;
+    model: string;
+  }>;
 }
 
 /**
