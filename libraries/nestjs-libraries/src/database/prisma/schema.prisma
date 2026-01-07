@@ -39,6 +39,14 @@ model Organization {
   usedCodes         UsedCodes[]
   users             UserOrganization[]
   webhooks          Webhooks[]
+
+  // AI Provider Management
+  aiProviders       AIProvider[]
+  aiTaskAssignments AITaskAssignment[]
+
+  // Admin Panel Fields
+  bypassBilling     Boolean            @default(false)  // Admin can bypass billing checks for this org
+  customLimits      String?                              // JSON string with custom limits override
 }
 
 model Tags {
@@ -90,16 +98,19 @@ model User {
   account               String?
   connectedAccount      Boolean            @default(false)
   lastOnline            DateTime           @default(now())
-  ip                    String?
-  agent                 String?
-  comments              Comments[]
-  items                 ItemUser[]
   groupBuyer            MessagesGroup[]    @relation("groupBuyer")
   groupSeller           MessagesGroup[]    @relation("groupSeller")
   orderBuyer            Orders[]           @relation("orderBuyer")
   orderSeller           Orders[]           @relation("orderSeller")
   payoutProblems        PayoutProblems[]
+
+  // Admin Panel Fields
+  customQuotas          String?                              // JSON string with custom quotas override
   agencies              SocialMediaAgency?
+  ip                    String?
+  agent                 String?
+  comments              Comments[]
+  items                 ItemUser[]
   picture               Media?             @relation(fields: [pictureId], references: [id])
   organizations         UserOrganization[]
   sendSuccessEmails     Boolean            @default(true)
@@ -671,6 +682,92 @@ model Mentions {
   @@index([createdAt])
 }
 
+/**
+ * AI Provider Configuration
+ * Stores configured AI providers for the organization (OpenAI, Anthropic, Gemini, custom, etc.)
+ */
+model AIProvider {
+  id             String               @id @default(uuid())
+  organizationId String
+  organization   Organization         @relation(fields: [organizationId], references: [id])
+
+  // Provider identification
+  name           String               // Display name (e.g., "My OpenAI", "Claude Enterprise")
+  type           String               // Provider type: openai, anthropic, openai-compatible, openrouter, gemini
+
+  // Configuration
+  apiKey         String               // Encrypted API key
+  baseUrl        String?              // Base URL (for OpenAI-compatible providers)
+  customConfig   String?              // JSON string for provider-specific settings
+
+  // Status
+  enabled        Boolean              @default(true)
+  isDefault      Boolean              @default(false) // Mark as default provider
+
+  // Metadata
+  availableModels String?              // JSON array of discovered models
+  lastTestedAt   DateTime?
+  testStatus     String?              // SUCCESS, FAILED, or null if not tested
+  testError      String?              // Error message if test failed
+
+  // Relations
+  taskAssignments AITaskAssignment[]
+  fallbackFor    AITaskAssignment[]   @relation("fallbackProvider")
+
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  deletedAt      DateTime?
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@index([type])
+  @@index([deletedAt])
+  @@index([organizationId, type, deletedAt])
+}
+
+/**
+ * AI Task Assignment
+ * Maps each task type (image, text, video, agent) to a provider and model
+ *
+ * Supports two strategies:
+ * - fallback: Primary provider with optional fallback
+ * - round-robin: Multiple providers that rotate in order
+ */
+model AITaskAssignment {
+  id                   String      @id @default(uuid())
+  organizationId       String
+  organization         Organization @relation(fields: [organizationId], references: [id])
+
+  // Task identification
+  taskType             String      // image, text, video-slides, agent
+
+  // Strategy selection
+  strategy             String      @default("fallback") // 'fallback' or 'round-robin'
+
+  // Primary provider and model (used for both strategies)
+  providerId           String
+  provider             AIProvider  @relation(fields: [providerId], references: [id])
+  model                String      // Model name (e.g., dall-e-3, gpt-4.1, claude-3-opus)
+
+  // Fallback provider and model (only for fallback strategy)
+  fallbackProviderId   String?
+  fallbackProvider     AIProvider? @relation("fallbackProvider", fields: [fallbackProviderId], references: [id])
+  fallbackModel        String?     // Fallback model name
+
+  // Round-robin providers (only for round-robin strategy)
+  // JSON array of [{providerId, model}, ...] for rotation
+  roundRobinProviders  String?     // JSON string storing multiple provider/model pairs
+
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  @@unique([organizationId, taskType])
+  @@index([organizationId])
+  @@index([taskType])
+  @@index([strategy])
+}
+
+// Mastra AI Models (from upstream)
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model mastra_ai_spans {
   traceId      String
@@ -866,6 +963,89 @@ enum Provider {
   FARCASTER
   WALLET
   GENERIC
+}
+
+// Admin Panel System Settings
+model SystemSettings {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedBy   String
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  @@index([key])
+  @@index([createdAt])
+}
+
+/**
+ * Admin Audit Log
+ * Tracks all admin actions for accountability and security auditing.
+ * Logs mutating actions (POST/PUT/PATCH/DELETE) with before/after state.
+ */
+model AdminAuditLog {
+  id         String   @id @default(uuid())
+  action     String   // USER_PROMOTE, USER_DEMOTE, ORG_TIER_CHANGE, SETTING_UPDATE, etc.
+  entityType String   // USER, ORGANIZATION, SETTING, AI_PROVIDER, etc.
+  entityId   String   // ID of the affected entity
+  adminId    String   // ID of the admin who performed the action
+  adminEmail String   // Email of the admin for easy reading
+  changes    String?  // JSON string of before/after values
+  ipAddress  String?  // IP address of the request
+  userAgent  String?  // User agent of the browser/client
+  createdAt  DateTime @default(now())
+
+  @@index([action])
+  @@index([adminId])
+  @@index([entityType, entityId])
+  @@index([createdAt(sort: Desc)])
+}
+
+/**
+ * Admin Webhook
+ * Webhook configuration for admin event notifications.
+ * Allows external systems to receive admin action events.
+ */
+model AdminWebhook {
+  id          String   @id @default(uuid())
+  name        String   // Display name for the webhook
+  url         String   // Webhook URL to send events to
+  events      String   // JSON array of event types to subscribe to
+  enabled     Boolean  @default(true)
+  secret      String?  // Webhook secret for signature verification
+  lastTrigger DateTime? // Last time this webhook was triggered
+  lastStatus  String?  // Last HTTP status code received
+  lastError   String?  // Last error message (if failed)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([enabled])
+  @@index([createdAt])
+}
+
+/**
+ * Maintenance Task
+ * Scheduled maintenance tasks for background jobs.
+ * Used for cleanup, data maintenance, and periodic operations.
+ */
+model MaintenanceTask {
+  id           String   @id @default(uuid())
+  name         String   @unique // Unique identifier for the task
+  displayName  String   // Human-readable name
+  description  String?  // Description of what the task does
+  cronSchedule String   // Cron expression for scheduling
+  enabled      Boolean  @default(true)
+  lastRun      DateTime? // Last time the task was run
+  nextRun      DateTime? // Next scheduled run time
+  lastStatus   String?  // SUCCESS, FAILED, or null
+  lastError    String?  // Last error message (if failed)
+  config       String?  // JSON string for task-specific configuration
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([enabled])
+  @@index([nextRun])
 }
 
 enum Role {

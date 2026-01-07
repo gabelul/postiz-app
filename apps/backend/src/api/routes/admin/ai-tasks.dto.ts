@@ -1,14 +1,70 @@
-import { IsString, IsNotEmpty, IsOptional, ValidateIf } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, ValidateIf, IsEnum, IsArray, ValidateNested } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+
+/**
+ * DTO for round-robin provider entry
+ * Used in round-robin mode to specify a provider and model in the rotation
+ */
+export class RoundRobinProviderDto {
+  /**
+   * Provider ID for round-robin rotation
+   */
+  @ApiProperty({
+    description: 'Provider ID for round-robin rotation',
+    example: 'cm5abc123def456',
+  })
+  @IsString()
+  @IsNotEmpty()
+  providerId: string;
+
+  /**
+   * Model name to use with this provider
+   */
+  @ApiProperty({
+    description: 'Model name to use (e.g., gpt-4.1, claude-3-opus)',
+    example: 'gpt-4.1',
+  })
+  @IsString()
+  @IsNotEmpty()
+  model: string;
+}
+
+/**
+ * Strategy type for provider selection
+ * - fallback: Primary provider with optional fallback
+ * - round-robin: Multiple providers that rotate in order
+ */
+export const STRATEGY_TYPES = ['fallback', 'round-robin'] as const;
+export type StrategyType = typeof STRATEGY_TYPES[number];
 
 /**
  * DTO for setting/updating an AI task assignment
  * Validates provider and model selection for specific task types
+ *
+ * Supports two strategies:
+ * - fallback: Primary provider with optional fallback provider
+ * - round-robin: Multiple providers that rotate in sequence
  */
 export class SetTaskAssignmentDto {
   /**
+   * Strategy for provider selection
+   * - fallback: Use primary provider, fall back to fallback if primary fails
+   * - round-robin: Rotate through multiple providers in order
+   */
+  @ApiPropertyOptional({
+    description: 'Provider selection strategy',
+    enum: STRATEGY_TYPES,
+    default: 'fallback',
+  })
+  @IsEnum(STRATEGY_TYPES)
+  @IsOptional()
+  strategy?: StrategyType;
+
+  /**
    * Primary provider ID to use for the task
-   * Must be a valid, enabled provider for the organization
+   * Required for both fallback and round-robin strategies
+   * For round-robin, this is the first provider in the rotation
    */
   @ApiProperty({
     description: 'Primary provider ID for the task',
@@ -20,7 +76,7 @@ export class SetTaskAssignmentDto {
 
   /**
    * Model name to use with the primary provider
-   * Must be an available model for the selected provider
+   * Required for both fallback and round-robin strategies
    */
   @ApiProperty({
     description: 'Model name to use (e.g., gpt-4.1, claude-3-opus)',
@@ -32,11 +88,11 @@ export class SetTaskAssignmentDto {
 
   /**
    * Optional fallback provider ID
+   * Only used when strategy is 'fallback'
    * Used when primary provider fails
-   * Empty string clears the fallback, undefined leaves it unchanged
    */
   @ApiPropertyOptional({
-    description: 'Fallback provider ID (optional)',
+    description: 'Fallback provider ID (only for fallback strategy)',
     example: 'cm5xyz789ghi012',
     nullable: true,
   })
@@ -46,19 +102,34 @@ export class SetTaskAssignmentDto {
 
   /**
    * Fallback model name
-   * Required when fallbackProviderId is provided
+   * Required when fallbackProviderId is provided (fallback strategy)
    */
   @ApiPropertyOptional({
-    description: 'Fallback model name',
+    description: 'Fallback model name (only for fallback strategy)',
     example: 'gpt-4o-mini',
     nullable: true,
   })
   @IsString()
-  @ValidateIf((o) => o.fallbackProviderId && o.fallbackProviderId.length > 0)
+  @ValidateIf((o) => o.strategy === 'fallback' || (!o.strategy && o.fallbackProviderId))
   @IsNotEmpty({
     message: 'Fallback model is required when fallback provider is specified',
   })
   fallbackModel?: string;
+
+  /**
+   * Array of providers for round-robin rotation
+   * Only used when strategy is 'round-robin'
+   * Includes providerId and model for each provider in the rotation
+   */
+  @ApiPropertyOptional({
+    description: 'Providers for round-robin rotation (only for round-robin strategy)',
+    type: [RoundRobinProviderDto],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => RoundRobinProviderDto)
+  @IsOptional()
+  roundRobinProviders?: RoundRobinProviderDto[];
 }
 
 /**

@@ -9,6 +9,7 @@ import {
   UseGuards,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AdminGuard } from '@gitroom/nestjs-libraries/guards/admin.guard';
@@ -38,6 +39,8 @@ import { SetTaskAssignmentDto, VALID_TASK_TYPES, ValidTaskType } from './ai-task
 @Controller('/api/admin/settings/ai-tasks')
 @UseGuards(AdminGuard)
 export class AdminAITasksController {
+  private readonly logger = new Logger(AdminAITasksController.name);
+
   constructor(
     private readonly _prisma: PrismaService,
     private readonly _aiTaskConfig: AITaskConfigService,
@@ -155,24 +158,28 @@ export class AdminAITasksController {
         key: 'image',
         label: 'Image Generation',
         description: 'DALL-E, Stable Diffusion for image creation',
+        modelRecommendation: 'Image models: dall-e-3, dall-e-2, stable-diffusion',
         icon: '🖼️',
       },
       {
         key: 'text',
         label: 'Text Generation',
         description: 'Social media posts, content writing',
+        modelRecommendation: 'Text models: gpt-4.1, gpt-4o, claude-3-5-sonnet, gemini-2.0-flash',
         icon: '📝',
       },
       {
         key: 'video-slides',
         label: 'Video Slides',
-        description: 'Generate image prompts and voice text for videos',
+        description: 'Generate image prompts and voice text for videos (uses text LLM)',
+        modelRecommendation: 'Text models: gpt-4.1, gpt-4o, claude-3-5-sonnet (creates slide structure, not images directly)',
         icon: '🎬',
       },
       {
         key: 'agent',
         label: 'Agent / Copilot',
         description: 'AI assistant and chat functionality',
+        modelRecommendation: 'Text models: gpt-4.1, claude-3-5-sonnet, gemini-2.0-flash',
         icon: '🤖',
       },
     ];
@@ -184,6 +191,7 @@ export class AdminAITasksController {
           ...tt,
           assignment: assignment
             ? {
+                strategy: assignment.strategy || 'fallback',
                 providerId: assignment.providerId,
                 providerName: assignment.provider.name,
                 providerType: assignment.provider.type,
@@ -192,6 +200,7 @@ export class AdminAITasksController {
                 fallbackProviderName: assignment.fallbackProvider?.name,
                 fallbackProviderType: assignment.fallbackProvider?.type,
                 fallbackModel: assignment.fallbackModel,
+                roundRobinProviders: this._parseJsonSafely(assignment.roundRobinProviders),
               }
             : null,
         };
@@ -305,7 +314,8 @@ export class AdminAITasksController {
 
     // Validate fallback provider if provided (not null or empty string)
     // null explicitly clears the fallback, undefined leaves it unchanged
-    if (body.fallbackProviderId && body.fallbackProviderId !== null) {
+    // Only validate for fallback strategy
+    if (body.strategy !== 'round-robin' && body.fallbackProviderId && body.fallbackProviderId !== null) {
       const fallback = await this._prisma.aIProvider.findFirst({
         where: {
           id: body.fallbackProviderId,
@@ -332,16 +342,67 @@ export class AdminAITasksController {
       }
     }
 
+    // Validate round-robin providers if provided
+    // Normalize null to empty array for consistent handling
+    const rrProviders = Array.isArray(body.roundRobinProviders) ? body.roundRobinProviders : [];
+    if (body.strategy === 'round-robin') {
+      if (rrProviders.length === 0) {
+        throw new BadRequestException('Round-robin strategy requires at least one provider');
+      }
+
+      // Batch query: Fetch all providers at once instead of N sequential queries
+      const providerIds = rrProviders.map((rp) => rp.providerId);
+      const batchedProviders = await this._prisma.aIProvider.findMany({
+        where: {
+          id: { in: providerIds },
+          organizationId: org.id,
+          deletedAt: null,
+          enabled: true,
+        },
+      });
+
+      // Create a map for efficient lookup
+      const providerMap = new Map(batchedProviders.map((p) => [p.id, p]));
+
+      for (const rp of rrProviders) {
+        const rpProvider = providerMap.get(rp.providerId);
+
+        if (!rpProvider) {
+          throw new NotFoundException(`Round-robin provider '${rp.providerId}' not found or not enabled`);
+        }
+
+        // Validate model availability
+        if (rpProvider.availableModels) {
+          try {
+            const models = JSON.parse(rpProvider.availableModels);
+            if (Array.isArray(models) && models.length > 0 && !models.includes(rp.model)) {
+              throw new BadRequestException(`Model '${rp.model}' is not available for provider ${rpProvider.name}. Available models: ${models.join(', ')}`);
+            }
+          } catch (e) {
+            // formatting error in DB, ignore validation
+          }
+        }
+      }
+    }
+
     // Prepare update data - handle null values for clearing fallback
     const updateData: {
       providerId: string;
       model: string;
       fallbackProviderId?: string | null;
       fallbackModel?: string | null;
+      strategy?: string;
+      roundRobinProviders?: string | null;
     } = {
       providerId: body.providerId,
       model: body.model,
     };
+
+    // Only set strategy if explicitly provided
+    // This prevents accidentally overwriting existing strategy on partial updates
+    if (body.strategy !== undefined) {
+      updateData.strategy = body.strategy;
+    }
 
     // Only include fallback fields if they are explicitly provided
     // null means clear the fallback, undefined means don't change
@@ -350,6 +411,13 @@ export class AdminAITasksController {
     }
     if (body.fallbackModel !== undefined) {
       updateData.fallbackModel = body.fallbackModel || null;
+    }
+
+    // Handle round-robin providers - use normalized rrProviders array
+    if (body.roundRobinProviders !== undefined) {
+      updateData.roundRobinProviders = rrProviders.length > 0
+        ? JSON.stringify(rrProviders)
+        : null;
     }
 
     // Use Prisma's atomic upsert to handle race conditions
@@ -367,8 +435,12 @@ export class AdminAITasksController {
         taskType,
         providerId: body.providerId,
         model: body.model,
+        strategy: body.strategy || 'fallback',
         fallbackProviderId: body.fallbackProviderId || null,
         fallbackModel: body.fallbackModel || null,
+        roundRobinProviders: rrProviders.length > 0
+          ? JSON.stringify(rrProviders)
+          : null,
       },
     });
 
@@ -420,6 +492,25 @@ export class AdminAITasksController {
       success: true,
       message: 'Task assignment deleted',
     };
+  }
+
+  /**
+   * Safely parse JSON string
+   * Returns null if parsing fails or input is empty
+   * @param jsonString - JSON string to parse
+   * @returns Parsed object or null
+   */
+  private _parseJsonSafely(jsonString: string | null): any {
+    if (!jsonString) {
+      return null;
+    }
+    try {
+      return JSON.parse(jsonString);
+    } catch (e) {
+      // Log error but don't crash - return null on parse failure
+      this.logger.error(`Failed to parse JSON: ${e}`);
+      return null;
+    }
   }
 }
 

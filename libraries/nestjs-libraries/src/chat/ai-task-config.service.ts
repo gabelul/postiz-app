@@ -78,9 +78,43 @@ export class AITaskConfigService {
   // Cache for organization-specific configurations
   private orgConfigs: Map<string, Record<AITaskType, IAITaskConfig>> = new Map();
 
+  // Track round-robin index per organization and task type
+  // Key format: "organizationId:taskType"
+  private roundRobinIndex: Map<string, number> = new Map();
+
   constructor(private _prisma: PrismaService) {
     this.logger.log('Initialized AITaskConfigService with per-task configurations');
     this.logConfiguration();
+  }
+
+  /**
+   * Get the next provider index for round-robin rotation
+   * Increments the counter for the next call
+   * @param organizationId - Organization ID
+   * @param taskType - Task type
+   * @param totalProviders - Total number of providers in rotation
+   * @returns Current index to use
+   */
+  private getRoundRobinIndex(organizationId: string, taskType: string, totalProviders: number): number {
+    const key = `${organizationId}:${taskType}`;
+    const currentIndex = this.roundRobinIndex.get(key) || 0;
+    const nextIndex = (currentIndex + 1) % totalProviders;
+    this.roundRobinIndex.set(key, nextIndex);
+    return currentIndex;
+  }
+
+  /**
+   * Clear round-robin indices for an organization
+   * Call this when configuration changes
+   * @param organizationId - Organization ID
+   */
+  private clearRoundRobinIndex(organizationId: string): void {
+    const prefix = `${organizationId}:`;
+    for (const key of this.roundRobinIndex.keys()) {
+      if (key.startsWith(prefix)) {
+        this.roundRobinIndex.delete(key);
+      }
+    }
   }
 
   /**
@@ -112,15 +146,29 @@ export class AITaskConfigService {
       // Convert database assignments to config format
       for (const assignment of assignments) {
         if (assignment.taskType in configs) {
+          // Parse round-robin providers from JSON if present
+          let roundRobinProviders: Array<{ providerId: string; model: string }> | undefined;
+          if (assignment.strategy === 'round-robin' && assignment.roundRobinProviders) {
+            try {
+              roundRobinProviders = JSON.parse(assignment.roundRobinProviders);
+            } catch (e) {
+              this.logger.warn(
+                `Failed to parse roundRobinProviders for ${assignment.taskType}: ${e instanceof Error ? e.message : 'Unknown error'}`
+              );
+            }
+          }
+
           // Store provider ID for precise lookup, with provider type as fallback
           configs[assignment.taskType as AITaskType] = {
             taskType: assignment.taskType as AITaskType,
             provider: assignment.provider.type, // Keep for backward compatibility
-            providerId: assignment.providerId, // New: store provider ID
+            providerId: assignment.providerId, // Store provider ID
             model: assignment.model,
             fallbackProvider: assignment.fallbackProvider?.type, // Keep for backward compatibility
-            fallbackProviderId: assignment.fallbackProviderId || undefined, // New: store fallback provider ID
+            fallbackProviderId: assignment.fallbackProviderId || undefined, // Store fallback provider ID
             fallbackModel: assignment.fallbackModel,
+            strategy: (assignment.strategy as 'fallback' | 'round-robin') || 'fallback',
+            roundRobinProviders,
           };
         }
       }
@@ -146,6 +194,7 @@ export class AITaskConfigService {
    */
   clearOrganizationCache(organizationId: string): void {
     this.orgConfigs.delete(organizationId);
+    this.clearRoundRobinIndex(organizationId); // Also clear round-robin indices
     this.logger.log(`Cleared configuration cache for organization: ${organizationId}`);
   }
 
@@ -273,7 +322,7 @@ export class AITaskConfigService {
 
   /**
    * Get the actual provider object for a task (with ID and encrypted key)
-   * First tries to lookup by providerId (if available), then falls back to type-based lookup
+   * First checks strategy (round-robin vs fallback), then looks up provider
    * @param taskType - The type of task
    * @param organizationId - Organization ID
    * @returns Provider object with ID, encrypted key, and configuration
@@ -291,6 +340,12 @@ export class AITaskConfigService {
         return null;
       }
 
+      // Check if round-robin strategy is configured
+      if (config.strategy === 'round-robin') {
+        return this.getRoundRobinProvider(taskType, organizationId);
+      }
+
+      // Fallback strategy: continue with existing logic
       // First try to lookup by provider ID (if available in config)
       // This ensures the exact provider selected in the UI is used
       if (config.providerId) {
@@ -407,6 +462,75 @@ export class AITaskConfigService {
     } catch (error) {
       this.logger.error(
         `Error getting fallback provider for ${taskType}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Get a provider using round-robin rotation strategy
+   * Rotates through configured providers on each call
+   * @param taskType - The type of task
+   * @param organizationId - Organization ID
+   * @returns Provider object or null
+   */
+  async getRoundRobinProvider(taskType: AITaskType, organizationId: string): Promise<AIProvider | null> {
+    try {
+      // Load organization config if not already cached
+      if (!this.orgConfigs.has(organizationId)) {
+        await this.loadOrganizationConfig(organizationId);
+      }
+
+      const config = this.getTaskConfig(taskType, organizationId);
+
+      // Check if round-robin is configured
+      if (config.strategy !== 'round-robin' || !config.roundRobinProviders || config.roundRobinProviders.length === 0) {
+        this.logger.warn(
+          `Round-robin not configured for task ${taskType}, falling back to default provider lookup`
+        );
+        return this.getTaskProvider(taskType, organizationId);
+      }
+
+      // Get current index and increment for next call
+      const currentIndex = this.getRoundRobinIndex(
+        organizationId,
+        taskType,
+        config.roundRobinProviders.length
+      );
+
+      const selectedProvider = config.roundRobinProviders[currentIndex];
+      if (!selectedProvider) {
+        this.logger.error(`Invalid round-robin index ${currentIndex} for task ${taskType}`);
+        return null;
+      }
+
+      // Fetch the provider from database
+      const provider = await this._prisma.aIProvider.findFirst({
+        where: {
+          id: selectedProvider.providerId,
+          organizationId,
+          deletedAt: null,
+          enabled: true,
+        },
+      });
+
+      if (!provider) {
+        this.logger.warn(
+          `Round-robin provider ${selectedProvider.providerId} not found or not enabled, trying next provider`
+        );
+        // Try next provider in rotation by calling ourselves recursively
+        // Note: This will increment the index again, skipping the unavailable provider
+        return this.getRoundRobinProvider(taskType, organizationId);
+      }
+
+      this.logger.log(
+        `Round-robin: Using provider ${provider.name} (${provider.type}) for task ${taskType} (index ${currentIndex + 1}/${config.roundRobinProviders.length})`
+      );
+
+      return provider;
+    } catch (error) {
+      this.logger.error(
+        `Error getting round-robin provider for ${taskType}: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
       return null;
     }
