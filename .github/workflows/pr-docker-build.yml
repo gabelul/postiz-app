@@ -8,11 +8,8 @@ permissions: write-all
 
 jobs:
   build-and-publish:
-    runs-on: ubuntu-latest
-
-    environment: 
-      name: build-pr
-
+    runs-on: self-hosted
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
