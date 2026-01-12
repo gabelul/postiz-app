@@ -203,6 +203,15 @@ function AdminAITasksPageContent() {
           toaster.show('Please select a model for all providers in the rotation', 'warning');
           return;
         }
+
+        // Check for duplicate provider+model combinations in round-robin
+        const duplicates = form.roundRobinProviders.filter((rp, i) =>
+          form.roundRobinProviders.some((otherRp, j) => i !== j && rp.providerId === otherRp.providerId && rp.model === otherRp.model)
+        );
+        if (duplicates.length > 0) {
+          toaster.show('Duplicate providers in round-robin - each provider+model combination should be unique', 'warning');
+          return;
+        }
       }
 
       try {
@@ -501,6 +510,12 @@ function AdminAITasksPageContent() {
               const primaryProvider = data.providers.find((p) => p.id === form.providerId);
               const fallbackProvider = data.providers.find((p) => p.id === form.fallbackProviderId);
 
+              // Validation: Warn if primary and fallback are identical
+              const isIdenticalConfig =
+                primaryProvider?.id === fallbackProvider?.id && form.model === form.fallbackModel;
+              const hasIdenticalConfigWarning =
+                isIdenticalConfig && form.fallbackProviderId && form.fallbackModel;
+
               // Get round-robin provider names for summary
               const roundRobinNames = form.roundRobinProviders
                 .map((rp) => {
@@ -674,12 +689,18 @@ function AdminAITasksPageContent() {
                                 value={form.fallbackProviderId}
                                 onChange={(value) => updateForm(task.key, { fallbackProviderId: value })}
                                 options={getProviderOptions()}
-                                placeholder="No fallback (use default)"
+                                placeholder={hasIdenticalConfigWarning ? "Select a different provider or model" : "Can be same provider with different model"}
                               />
                             </div>
 
                             {form.fallbackProviderId && fallbackModels.length > 0 && (
                               <div>
+                                {hasIdenticalConfigWarning && (
+                                  <div className="mb-2 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded text-yellow-200 text-xs flex items-center gap-2">
+                                    <span>⚠️</span>
+                                    <span>Fallback is identical to primary - no redundancy benefit</span>
+                                  </div>
+                                )}
                                 <label htmlFor={`fallback-model-${task.key}`} className="block text-sm font-medium text-newTextColor mb-2">
                                   Fallback Model
                                 </label>
