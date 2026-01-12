@@ -673,7 +673,7 @@ function AdminAITasksPageContent() {
                               <SearchableSelect
                                 value={form.fallbackProviderId}
                                 onChange={(value) => updateForm(task.key, { fallbackProviderId: value })}
-                                options={getProviderOptions().filter((opt) => opt.value !== form.providerId)}
+                                options={getProviderOptions()}
                                 placeholder="No fallback (use default)"
                               />
                             </div>
@@ -727,11 +727,8 @@ function AdminAITasksPageContent() {
                               {form.roundRobinProviders.map((rp, index) => {
                                 const provider = data.providers.find((p) => p.id === rp.providerId);
                                 const models = provider ? getProviderModels(provider.id) : [];
-                                const providerOptions = getProviderOptions().filter(
-                                  (opt) => !form.roundRobinProviders.some((otherRp, otherIdx) =>
-                                    otherIdx !== index && otherRp.providerId === opt.value
-                                  )
-                                );
+                                // Allow same provider with different models in round-robin
+                                const providerOptions = getProviderOptions();
 
                                 return (
                                   <div
